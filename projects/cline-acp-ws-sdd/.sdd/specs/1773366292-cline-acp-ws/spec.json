@@ -1,0 +1,21 @@
+{
+  "id": "1773366292-cline-acp-ws",
+  "name": "cline-acp-ws",
+  "description": "ACP 브릿지 서버 + React 채팅 UI (WebSocket)",
+  "created": "2026-03-13T01:44:52Z",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": {
+      "generated": true,
+      "approved": true
+    },
+    "design": {
+      "generated": true,
+      "approved": true
+    },
+    "tasks": {
+      "generated": true,
+      "approved": true
+    }
+  }
+}
