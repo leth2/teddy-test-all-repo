@@ -7,7 +7,7 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY}
     volumes:
       - ./workspace:/workspace   # shared workspace the agent can read/write
     working_dir: /workspace
