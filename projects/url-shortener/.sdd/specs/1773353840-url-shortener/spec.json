@@ -1,0 +1,15 @@
+{
+  "feature": "1773353840-url-shortener",
+  "description": "URL 단축 서비스: 긴 URL을 짧은 코드로 단축, 클릭 통계 대시보드, 태그 분류 기능",
+  "created_at": "2026-03-12T22:17:20Z",
+  "updated_at": "2026-03-12T22:27:24Z",
+  "phase": "impl-started",
+  "language": "ko",
+  "approvals": {
+    "requirements": { "generated": true, "approved": false },
+    "design": { "generated": true, "approved": false },
+    "tasks": { "generated": true, "approved": false }
+  },
+  "autonomous": false,
+  "log_file": ".sdd/logs/2026-03-13.md"
+}
