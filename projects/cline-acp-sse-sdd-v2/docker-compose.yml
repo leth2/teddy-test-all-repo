@@ -7,7 +7,9 @@ services:
       - "3002:3002"
     environment:
       - PORT=3002
-      - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY}
+      - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY:-}
+    volumes:
+      - ~/.claude:/root/.claude:ro
     networks:
       - acp-network
 

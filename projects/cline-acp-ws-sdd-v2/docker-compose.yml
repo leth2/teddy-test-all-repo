@@ -8,9 +8,10 @@ services:
     environment:
       - PORT=3001
       - WORK_DIR=/workspace
-      - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY}
+      - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY:-}
     volumes:
       - ./workspace:/workspace
+      - ~/.claude:/root/.claude:ro
     restart: unless-stopped
 
   ui:
