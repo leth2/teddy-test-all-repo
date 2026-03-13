@@ -1,0 +1,13 @@
+{
+  "id": "1773368794-cline-acp-ws-v2",
+  "name": "cline-acp-ws-v2",
+  "description": "ACP 브릿지 서버 + React 채팅 UI (WebSocket). SDD v2 개선된 도구 적용.",
+  "created": 1773368794,
+  "phase": "impl-complete",
+  "approvals": {
+    "requirements": { "generated": true },
+    "design": { "generated": true },
+    "tasks": { "generated": true },
+    "impl": { "generated": true }
+  }
+}

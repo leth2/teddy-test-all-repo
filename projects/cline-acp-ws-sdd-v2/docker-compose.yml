@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  agent:
+    build: ./agent
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - WORK_DIR=/workspace
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./workspace:/workspace
+    restart: unless-stopped
+
+  ui:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./ui:/app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_WS_URL=ws://localhost:3001
+    command: sh -c "npm install && npm run dev"
+    restart: unless-stopped
