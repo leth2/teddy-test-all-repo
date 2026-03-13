@@ -1,0 +1,11 @@
+{
+  "feature": "cline-acp-sse-v2",
+  "created": 1773368822,
+  "phase": "implementation",
+  "approvals": {
+    "requirements": { "generated": true, "approved": true },
+    "design": { "generated": true, "approved": true },
+    "tasks": { "generated": true, "approved": true },
+    "implementation": { "done": true }
+  }
+}

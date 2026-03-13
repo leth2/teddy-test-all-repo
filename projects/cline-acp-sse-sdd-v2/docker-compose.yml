@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  agent:
+    build: ./agent
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    networks:
+      - acp-network
+
+  ui:
+    build:
+      context: ./ui
+      args:
+        - VITE_SERVER_URL=http://agent:3002
+    ports:
+      - "5174:5174"
+    depends_on:
+      - agent
+    networks:
+      - acp-network
+
+networks:
+  acp-network:
+    driver: bridge
