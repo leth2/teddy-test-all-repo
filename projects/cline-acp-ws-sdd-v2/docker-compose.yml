@@ -9,6 +9,7 @@ services:
       - PORT=3001
       - WORK_DIR=/workspace
       - ANTHROPIC_API_KEY=${TEDDY_ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_BASE_URL=${TEDDY_ANTHROPIC_BASE_URL:-}
     volumes:
       - ./workspace:/workspace
       - ~/.claude:/root/.claude:ro
