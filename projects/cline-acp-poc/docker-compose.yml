@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # ACP bridge server — spawns claude-agent-acp and bridges it to WebSocket
+  agent-bridge:
+    build: ./agent
+    ports:
+      - "3001:3001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./workspace:/workspace   # shared workspace the agent can read/write
+    working_dir: /workspace
+
+  # React UI — Vite dev server
+  ui:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./ui:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host"
+    depends_on:
+      - agent-bridge
