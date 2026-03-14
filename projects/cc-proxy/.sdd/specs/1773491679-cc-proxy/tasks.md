@@ -27,12 +27,15 @@
 
 ## T4. 검증
 
-- [ ] T4.1 `curl` 단순 호출 테스트
-- [ ] T4.2 `stream: true` 스트리밍 테스트
-- [ ] T4.3 환경변수 설정 후 cline/CodeSpeak 연동 테스트 (Quinn)
+- [x] T4.1 `curl` 단순 호출 테스트 — PASS ✅
+- [x] T4.2 `stream: true` 스트리밍 테스트 — PASS ✅
+- [x] T4.3 cline + cc-proxy E2E — PASS ✅ (Quinn, Pi 2)
+  - `[bridge] sessionUpdate: agent_message_chunk "1+1 = 2"` 수신 확인
 
-## 완료 기준
+## 완료 기준 — 모두 달성 🎉
 
 - `POST /v1/messages`로 Claude 응답 수신 ✅
 - `stream: true` SSE 스트리밍 동작 ✅
-- Quinn이 `ANTHROPIC_BASE_URL=http://Pi1_IP:8787`로 cline 테스트 통과 ✅
+- Quinn이 `ANTHROPIC_BASE_URL=http://192.168.50.41:8787`로 cline E2E 통과 ✅
+
+## 완료일: 2026-03-14
