@@ -15,6 +15,7 @@
 
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
+import { resolve } from 'path';
 
 export interface PermissionRequest {
   requestId: string;
@@ -57,7 +58,9 @@ export class ACPBridge extends EventEmitter {
     this.sessionId = null;
 
     try {
-      this.process = spawn('npx', ['-y', '@zed-industries/claude-agent-acp'], {
+      // npx 래퍼 우회 — node_modules/.bin 직접 실행 (stdin pipe 정상 전달)
+      const agentBin = resolve(__dirname, '../node_modules/.bin/claude-agent-acp');
+      this.process = spawn(agentBin, [], {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env },
       });
