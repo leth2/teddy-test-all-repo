@@ -1,0 +1,25 @@
+{
+  "queue_id": "test-queue-acp.json",
+  "run_at": "2026-03-14T03:15:08.391Z",
+  "passed": 0,
+  "failed": 2,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T2.1",
+      "status": "fail",
+      "duration_ms": 287,
+      "reason": "exit_code 1, expected 0",
+      "output": "ACP 핸드셰이크 테스트 시작 — http://localhost:3001\n\n--- 테스트 결과 ---\n수신 메시지: []\n❌ ACP 핸드셰이크 실패\n - HTTP 426: session/new 실패\n - session/new 미수신\n - session/prompt 미수신\n",
+      "retries": 3
+    },
+    {
+      "id": "T2.2",
+      "status": "fail",
+      "duration_ms": 181,
+      "reason": "status 426, expected 200",
+      "output": "Upgrade Required",
+      "retries": 1
+    }
+  ]
+}
