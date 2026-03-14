@@ -1,0 +1,19 @@
+{
+  "queue_id": "test-queue-sse.json",
+  "run_at": "2026-03-14T04:30:59.146Z",
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T3.1",
+      "status": "pass",
+      "duration_ms": 204
+    },
+    {
+      "id": "T3.2",
+      "status": "pass",
+      "duration_ms": 317
+    }
+  ]
+}
