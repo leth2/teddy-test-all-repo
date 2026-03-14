@@ -15,6 +15,7 @@ function nodeStreamToAcpStream(
   const readable = new ReadableStream<Uint8Array>({
     start(controller) {
       stdout.on('data', (chunk: Buffer) => {
+        console.log('[stdout raw]', chunk.toString('utf8').slice(0, 300));
         controller.enqueue(new Uint8Array(chunk));
       });
       stdout.on('end', () => controller.close());
