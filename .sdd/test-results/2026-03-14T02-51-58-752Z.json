@@ -1,0 +1,30 @@
+{
+  "queue_id": "test-queue-example.json",
+  "run_at": "2026-03-14T02:51:58.751Z",
+  "passed": 0,
+  "failed": 2,
+  "skipped": 1,
+  "tasks": [
+    {
+      "id": "T1.1",
+      "status": "fail",
+      "duration_ms": 0,
+      "reason": "fetch failed",
+      "output": "",
+      "retries": 1
+    },
+    {
+      "id": "T1.2",
+      "status": "skipped",
+      "reason": "depends_on failed: T1.1"
+    },
+    {
+      "id": "T2.1",
+      "status": "fail",
+      "duration_ms": 138,
+      "reason": "exit_code 1, expected 0; output missing: session/new, session/prompt",
+      "output": "file:///home/leth2/.openclaw/workspace/test-all/test/acp-handshake.js:11\nconst { spawn } = require('child_process');\n                  ^\n\nReferenceError: require is not defined in ES module scope, you can use import instead\nThis file is being treated as an ES module because it has a '.js' file exten",
+      "retries": 3
+    }
+  ]
+}

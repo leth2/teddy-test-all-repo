@@ -1,0 +1,30 @@
+{
+  "queue_id": "test-queue-example.json",
+  "run_at": "2026-03-14T02:48:57.077Z",
+  "passed": 0,
+  "failed": 2,
+  "skipped": 1,
+  "tasks": [
+    {
+      "id": "T1.1",
+      "status": "fail",
+      "duration_ms": 0,
+      "reason": "fetch failed",
+      "output": "",
+      "retries": 1
+    },
+    {
+      "id": "T1.2",
+      "status": "skipped",
+      "reason": "depends_on failed: T1.1"
+    },
+    {
+      "id": "T2.1",
+      "status": "fail",
+      "duration_ms": 5,
+      "reason": "spawn /usr/bin/node ENOENT",
+      "output": "spawn /usr/bin/node ENOENT",
+      "retries": 3
+    }
+  ]
+}
