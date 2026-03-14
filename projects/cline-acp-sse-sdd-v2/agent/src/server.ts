@@ -56,6 +56,11 @@ app.get('/events', (req: Request, res: Response) => {
   // 연결 확인 이벤트
   sendSSEEvent(res, 'connected', { message: 'SSE 연결됨' });
 
+  // 이미 bridge가 ready면 즉시 agent-ready 전송 (레이스 컨디션 방지)
+  if (bridge.isReady()) {
+    sendSSEEvent(res, 'agent-ready', { message: 'ACP 에이전트가 준비됐습니다' });
+  }
+
   // 15초마다 keepalive (참조: requirements 3.2)
   const keepaliveInterval = setInterval(() => {
     sendSSEEvent(res, 'keepalive', {});

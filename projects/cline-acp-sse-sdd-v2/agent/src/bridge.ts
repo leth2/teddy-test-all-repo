@@ -154,6 +154,10 @@ export class ACPBridge extends EventEmitter {
     return this.process !== null;
   }
 
+  isReady(): boolean {
+    return this.handshakeState === 'ready';
+  }
+
   hasPendingPermission(requestId: string): boolean {
     return this.pendingPermissions.has(requestId);
   }
