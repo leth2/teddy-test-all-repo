@@ -1,0 +1,19 @@
+{
+  "queue_id": "test-queue-acp.json",
+  "run_at": "2026-03-14T03:26:54.297Z",
+  "passed": 2,
+  "failed": 0,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T2.1",
+      "status": "pass",
+      "duration_ms": 8981
+    },
+    {
+      "id": "T2.2",
+      "status": "pass",
+      "duration_ms": 191
+    }
+  ]
+}
