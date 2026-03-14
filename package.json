@@ -1,1 +1,8 @@
-{"name":"test-all","type":"module","dependencies":{"ws":"^8.0.0"}}
+{
+  "name": "test-all",
+  "type": "module",
+  "dependencies": {
+    "ws": "^8.0.0",
+    "eventsource": "^3.0.0"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "version": "1.2",
+  "created_at": "2026-03-14T03:55:00Z",
+  "spec_id": "cline-acp-sse-sdd-v2",
+  "source": {
+    "repo_url": "https://github.com/leth2/teddy-test-all-repo",
+    "branch": "main",
+    "path": "/home/leth2/.openclaw/workspace/test-all",
+    "pre_run": "git pull"
+  },
+  "tasks": [
+    {
+      "id": "T3.1",
+      "type": "conformance",
+      "description": "SSE 에이전트 HTTP /health 확인",
+      "target": {
+        "kind": "http",
+        "url": "http://localhost:3002/health",
+        "method": "GET"
+      },
+      "expect": {
+        "status": 200
+      },
+      "timeout_ms": 5000,
+      "on_failure": "escalate"
+    },
+    {
+      "id": "T3.2",
+      "type": "conformance",
+      "description": "SSE /events 엔드포인트 연결 + agent_ready 이벤트 수신",
+      "target": {
+        "kind": "cli",
+        "command": "node",
+        "args": ["test/sse-handshake.js"]
+      },
+      "env": {
+        "SSE_AGENT_URL": "http://localhost:3002",
+        "TIMEOUT_MS": "60000"
+      },
+      "expect": {
+        "exit_code": 0,
+        "contains": ["agent_ready", "T3.2 통과"]
+      },
+      "timeout_ms": 90000,
+      "retry": { "max": 2, "delay_ms": 3000 },
+      "on_failure": "escalate"
+    }
+  ]
+}
