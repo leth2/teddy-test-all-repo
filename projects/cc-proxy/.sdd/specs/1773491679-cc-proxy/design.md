@@ -66,6 +66,21 @@ export ANTHROPIC_BASE_URL="http://localhost:8787"
 
 ## 제약사항
 
-- 로컬 전용 (`127.0.0.1` 바인드)
+- 바인드: `0.0.0.0` (Pi 간 접근 허용 — Pi 2에서 Pi 1으로 연결)
 - 인증 검사 없음 (API 키 값 무시)
 - 모델 이름 그대로 전달 (변환 없음)
+
+## system prompt 처리 규칙
+
+요청 `system` 필드 처리:
+1. `system` 없음 → `[{type:"text", text:"You are Claude Code..."}]` 단독 주입
+2. `system` 있고 이미 "You are Claude Code..." 포함 → 그대로 전달
+3. `system` 있고 미포함 → "You are Claude Code..." 항목을 **앞에** prepend
+
+cline이 자체 system prompt를 보낼 경우를 위한 중복 주입 방지.
+
+## 네트워크
+
+- Pi 1 IP: `192.168.50.41`
+- cc-proxy 바인드: `0.0.0.0:8787`
+- Pi 2 cline 설정: `ANTHROPIC_BASE_URL=http://192.168.50.41:8787`
