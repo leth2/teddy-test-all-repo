@@ -5,7 +5,7 @@
   "source": {
     "repo_url": "https://github.com/leth2/teddy-test-all-repo",
     "branch": "main",
-    "path": "/home/leth2/workspace/test-all",
+    "path": "/home/leth2/.openclaw/workspace/test-all",
     "pre_run": "git pull"
   },
   "tasks": [
