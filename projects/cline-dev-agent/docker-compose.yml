@@ -4,6 +4,7 @@ services:
     ports:
       - "${PORT:-3002}:3002"
     volumes:
+      - ${CLINE_DIR:-~/.cline}:/root/.cline:ro
       - ${WORKTREE_PATH:-.}:/workspace
     environment:
       - PORT=3002
