@@ -1,0 +1,10 @@
+{
+  "name": "teddy-test-all",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Quinn's test pipeline runner",
+  "main": "pipeline-runner.js",
+  "scripts": {
+    "test": "node pipeline-runner.js test-queue-example.json"
+  }
+}
