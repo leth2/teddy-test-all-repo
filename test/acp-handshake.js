@@ -1,81 +1,70 @@
 /**
  * acp-handshake.js
- * ACP 프로토콜 핸드셰이크 컨포먼스 테스트 (T2.1)
- * ESM 방식
+ * ACP WebSocket 핸드셰이크 컨포먼스 테스트 (T2.1)
  *
  * 검증 항목:
- * - session/new 메시지 전송
- * - session/prompt 응답 수신
- * - 메시지 순서: session/new → session/prompt
+ * - WebSocket 연결 성공
+ * - agent_ready 메시지 수신
  */
 
-const ACP_AGENT_URL = process.env.ACP_AGENT_URL || 'http://localhost:3001';
+import { WebSocket } from 'ws';
+
+const ACP_WS_URL = process.env.ACP_AGENT_URL
+  ? process.env.ACP_AGENT_URL.replace('http://', 'ws://')
+  : 'ws://localhost:3001';
 const TIMEOUT_MS = parseInt(process.env.TIMEOUT_MS || '10000');
 
 async function testACPHandshake() {
-  console.log(`ACP 핸드셰이크 테스트 시작 — ${ACP_AGENT_URL}`);
+  console.log(`ACP WebSocket 핸드셰이크 테스트 시작 — ${ACP_WS_URL}`);
 
-  const messages = [];
-  const errors = [];
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      ws.close();
+      reject(new Error(`타임아웃: ${TIMEOUT_MS}ms 초과`));
+    }, TIMEOUT_MS);
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const ws = new WebSocket(ACP_WS_URL);
 
-    const res = await fetch(`${ACP_AGENT_URL}/message`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'session/new',
-        params: {}
-      }),
-      signal: controller.signal
-    }).finally(() => clearTimeout(timer));
+    ws.on('open', () => {
+      console.log('✅ WebSocket 연결 성공');
+    });
 
-    if (!res.ok) {
-      errors.push(`HTTP ${res.status}: session/new 실패`);
-    } else {
-      const data = await res.json();
-      messages.push('session/new');
-      console.log('✅ session/new 응답:', JSON.stringify(data));
+    ws.on('message', (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        console.log('수신:', JSON.stringify(msg));
 
-      const body = JSON.stringify(data);
-      if (body.includes('session/prompt') || data.method === 'session/prompt') {
-        messages.push('session/prompt');
-        console.log('✅ session/prompt 확인');
-      } else {
-        // WebSocket bridge 방식에선 별도 채널로 오는 게 정상
-        console.log('ℹ️  session/prompt는 WebSocket 스트림으로 수신됨 (정상)');
-        messages.push('session/prompt');
+        if (msg.type === 'agent_ready') {
+          console.log('✅ agent_ready 수신 — ACP 핸드셰이크 완료');
+          clearTimeout(timer);
+          ws.close();
+          resolve(true);
+        }
+      } catch {
+        console.error('파싱 오류:', raw.toString());
       }
-    }
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      errors.push(`타임아웃: ${TIMEOUT_MS}ms 초과`);
-    } else {
-      errors.push(`연결 실패: ${err.message}`);
-    }
-  }
+    });
 
-  console.log('\n--- 테스트 결과 ---');
-  console.log('수신 메시지:', messages);
+    ws.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
 
-  const hasNew = messages.includes('session/new');
-  const hasPrompt = messages.includes('session/prompt');
-
-  if (!hasNew) errors.push('session/new 미수신');
-  if (!hasPrompt) errors.push('session/prompt 미수신');
-
-  if (hasNew && hasPrompt && errors.length === 0) {
-    console.log('✅ ACP 핸드셰이크 통과');
-    process.exit(0);
-  } else {
-    console.error('❌ ACP 핸드셰이크 실패');
-    errors.forEach(e => console.error(' -', e));
-    process.exit(1);
-  }
+    ws.on('close', (code) => {
+      if (code !== 1000 && code !== 1001) {
+        clearTimeout(timer);
+        reject(new Error(`WebSocket 비정상 종료: ${code}`));
+      }
+    });
+  });
 }
 
-testACPHandshake();
+testACPHandshake()
+  .then(() => {
+    console.log('\n✅ ACP 핸드셰이크 통과');
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error('\n❌ ACP 핸드셰이크 실패:', err.message);
+    process.exit(1);
+  });
