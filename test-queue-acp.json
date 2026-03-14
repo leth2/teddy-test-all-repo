@@ -19,11 +19,12 @@
         "args": ["test/acp-handshake.js"]
       },
       "env": {
-        "ACP_AGENT_URL": "http://localhost:3001"
+        "ACP_AGENT_URL": "http://localhost:3001",
+        "TIMEOUT_MS": "60000"
       },
       "expect": {
         "exit_code": 0,
-        "contains": ["session/new", "session/prompt"]
+        "contains": ["agent_ready", "T2.1 통과"]
       },
       "timeout_ms": 90000,
       "retry": { "max": 2, "delay_ms": 2000 },
