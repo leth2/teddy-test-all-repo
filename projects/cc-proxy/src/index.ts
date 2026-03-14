@@ -88,6 +88,7 @@ app.post("/v1/messages", async (req: Request, res: Response) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
+  const HOST_IP = process.env.HOST_IP ?? "<this-machine-ip>";
   console.log(`✅ cc-proxy listening on http://0.0.0.0:${PORT}`);
-  console.log(`   ANTHROPIC_BASE_URL=http://192.168.50.41:${PORT}`);
+  console.log(`   클라이언트 설정: ANTHROPIC_BASE_URL=http://${HOST_IP}:${PORT}`);
 });
