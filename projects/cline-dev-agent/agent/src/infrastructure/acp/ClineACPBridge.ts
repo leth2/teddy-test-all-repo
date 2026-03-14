@@ -1,8 +1,43 @@
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
-import { Writable, Readable } from 'stream';
 import * as acp from '@agentclientprotocol/sdk';
 import { IACPBridge } from '../../domain/ports/IACPBridge';
+
+/**
+ * Node.js 네이티브 스트림 → WHATWG Stream 변환
+ * Lesson A05: Writable.toWeb()/Readable.toWeb()는 socket-backed stream에서 실패할 수 있음
+ * stdin.write() + stdout.on('data') 사용
+ */
+function nodeStreamToAcpStream(
+  stdin: NodeJS.WritableStream,
+  stdout: NodeJS.ReadableStream,
+): { readable: ReadableStream<Uint8Array>; writable: WritableStream<Uint8Array> } {
+  const readable = new ReadableStream<Uint8Array>({
+    start(controller) {
+      stdout.on('data', (chunk: Buffer) => {
+        controller.enqueue(new Uint8Array(chunk));
+      });
+      stdout.on('end', () => controller.close());
+      stdout.on('error', (err: Error) => controller.error(err));
+    },
+  });
+
+  const writable = new WritableStream<Uint8Array>({
+    write(chunk) {
+      return new Promise<void>((resolve, reject) => {
+        stdin.write(chunk, (err?: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    },
+    close() {
+      (stdin as NodeJS.WritableStream & { end: () => void }).end();
+    },
+  });
+
+  return { readable, writable };
+}
 
 // OCP: IACPBridge 구현체 — 다른 ACP 에이전트로 교체 시 이 파일만 변경
 // @agentclientprotocol/sdk ClientSideConnection 사용 (Lesson A04: SDK 사용, 수동 JSON-RPC 금지)
@@ -46,10 +81,9 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
       this.emit('exit', code);
     });
 
-    // ACP SDK: ndJsonStream + ClientSideConnection
-    const input = Writable.toWeb(this.process.stdin) as WritableStream<Uint8Array>;
-    const output = Readable.toWeb(this.process.stdout) as ReadableStream<Uint8Array>;
-    const stream = acp.ndJsonStream(input, output);
+    // Lesson A05: toWeb() 대신 Node.js 네이티브 스트림으로 직접 변환
+    const rawStream = nodeStreamToAcpStream(this.process.stdin, this.process.stdout);
+    const stream = acp.ndJsonStream(rawStream.writable, rawStream.readable);
 
     // ACP Client — agent에서 오는 요청 처리
     const self = this;
