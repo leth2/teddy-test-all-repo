@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDD Test Queue",
+  "description": "Quinn이 읽고 실행하는 테스트 태스크 큐 (v1.2 - Git pull 자동화 추가)",
+  "type": "object",
+  "properties": {
+    "version": { "type": "string", "example": "1.2" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "spec_id": {
+      "type": "string",
+      "description": "연결된 SDD 스펙 폴더명 (예: 1773353840-url-shortener)"
+    },
+    "source": {
+      "type": "object",
+      "description": "테스트 전 최신 코드 pull 설정",
+      "properties": {
+        "repo_url": {
+          "type": "string",
+          "description": "GitHub 레포 URL (예: https://github.com/leth2/teddy-test-all-repo)"
+        },
+        "branch": {
+          "type": "string",
+          "default": "main",
+          "description": "체크아웃할 브랜치"
+        },
+        "path": {
+          "type": "string",
+          "description": "Pi 2에서 레포가 위치할 로컬 경로 (예: /home/leth2/workspace/test-all)"
+        },
+        "pre_run": {
+          "type": "string",
+          "default": "git pull",
+          "description": "테스트 실행 전 자동으로 실행할 명령어"
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "description", "target", "expect"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "고유 태스크 ID (예: T2.1)",
+            "pattern": "^T[0-9]+(\\.[0-9]+)?$"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["conformance", "acceptance", "integration", "e2e"]
+          },
+          "description": {
+            "type": "string",
+            "description": "무엇을 테스트하는지 한 줄 설명 — 실패 보고서에 사용됨"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "이 태스크 실행 전 완료되어야 할 태스크 ID 목록 (예: [\"T1.1\"])"
+          },
+          "target": {
+            "type": "object",
+            "description": "테스트 대상",
+            "required": ["kind"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["http", "cli", "file", "function"]
+              },
+              "url": {
+                "type": "string",
+                "description": "HTTP 엔드포인트 URL (http kind 전용)"
+              },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+                "default": "GET",
+                "description": "HTTP method (http kind 전용)"
+              },
+              "command": {
+                "type": "string",
+                "description": "실행할 명령어 (cli kind 전용, 예: node)"
+              },
+              "args": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "CLI 인수 (cli kind 전용)"
+              },
+              "path": {
+                "type": "string",
+                "description": "파일 경로 (file kind 전용)"
+              }
+            }
+          },
+          "input": {
+            "type": "object",
+            "description": "테스트 입력값 (선택)",
+            "properties": {
+              "headers": { "type": "object" },
+              "body": {},
+              "params": { "type": "object" }
+            }
+          },
+          "env": {
+            "type": "object",
+            "description": "태스크 실행 시 주입할 환경변수 (cli/function kind에서 유용)",
+            "additionalProperties": { "type": "string" }
+          },
+          "expect": {
+            "type": "object",
+            "description": "기대 결과",
+            "properties": {
+              "status": {
+                "type": "integer",
+                "description": "기대 HTTP 상태코드 (http kind)"
+              },
+              "body": {
+                "description": "응답 바디 완전 일치 (정확한 값이 필요할 때)"
+              },
+              "contains": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "응답 바디에 포함되어야 할 문자열들 (부분 일치)"
+              },
+              "exit_code": {
+                "type": "integer",
+                "description": "기대 CLI exit code (cli kind)"
+              }
+            }
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "default": 10000,
+            "description": "태스크 최대 실행 시간 (ms) — 초과 시 실패 처리"
+          },
+          "retry": {
+            "type": "object",
+            "description": "실패 시 재시도 정책",
+            "properties": {
+              "max": { "type": "integer", "default": 0 },
+              "delay_ms": { "type": "integer", "default": 1000 }
+            }
+          },
+          "on_failure": {
+            "type": "string",
+            "enum": ["continue", "stop", "escalate"],
+            "default": "continue",
+            "description": "실패 시 처리: 계속 / 중단 / Finn에게 에스컬레이션"
+          }
+        }
+      }
+    }
+  }
+}

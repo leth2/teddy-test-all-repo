@@ -1,0 +1,71 @@
+{
+  "version": "1.2",
+  "created_at": "2026-03-14T02:45:00Z",
+  "spec_id": "1773353840-url-shortener",
+  "source": {
+    "repo_url": "https://github.com/leth2/teddy-test-all-repo",
+    "branch": "main",
+    "path": "/home/leth2/workspace/test-all",
+    "pre_run": "git pull"
+  },
+  "tasks": [
+    {
+      "id": "T1.1",
+      "type": "acceptance",
+      "description": "URL 단축 API - 정상 요청 시 201 + shortCode 반환",
+      "target": {
+        "kind": "http",
+        "url": "http://localhost:3000/api/shorten",
+        "method": "POST"
+      },
+      "input": {
+        "body": { "url": "https://example.com" }
+      },
+      "expect": {
+        "status": 201,
+        "contains": ["shortCode"]
+      },
+      "timeout_ms": 5000,
+      "on_failure": "escalate"
+    },
+    {
+      "id": "T1.2",
+      "type": "acceptance",
+      "description": "URL 단축 API - 잘못된 URL 입력 시 400 반환",
+      "depends_on": ["T1.1"],
+      "target": {
+        "kind": "http",
+        "url": "http://localhost:3000/api/shorten",
+        "method": "POST"
+      },
+      "input": {
+        "body": { "url": "not-a-url" }
+      },
+      "expect": {
+        "status": 400
+      },
+      "timeout_ms": 5000,
+      "on_failure": "continue"
+    },
+    {
+      "id": "T2.1",
+      "type": "conformance",
+      "description": "ACP 핸드셰이크 - session/new + session/prompt 순서 확인",
+      "target": {
+        "kind": "cli",
+        "command": "node",
+        "args": ["test/acp-handshake.js"]
+      },
+      "env": {
+        "ACP_AGENT_URL": "http://localhost:3001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "contains": ["session/new", "session/prompt"]
+      },
+      "timeout_ms": 15000,
+      "retry": { "max": 2, "delay_ms": 2000 },
+      "on_failure": "escalate"
+    }
+  ]
+}
