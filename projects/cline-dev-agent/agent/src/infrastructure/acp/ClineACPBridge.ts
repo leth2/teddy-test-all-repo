@@ -56,7 +56,7 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
     rl.on('line', (line) => this.handleLine(line));
 
     this.process.stderr?.on('data', (data: Buffer) => {
-      console.error('[cline stderr]', data.toString());
+      console.error('[cline stderr]', data.toString().trim());
     });
 
     this.process.on('exit', (code) => {
@@ -70,13 +70,16 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
   private async initialize(): Promise<void> {
     // 1. initialize
     const initRes = await this.request('initialize', {
-      protocolVersion: '0.1',
+      protocolVersion: '2024-11-05',
       capabilities: {},
       clientInfo: { name: 'cline-dev-agent', version: '1.0.0' },
     });
     console.log('[bridge] initialized:', JSON.stringify(initRes));
 
-    // 2. session/new — Lesson A02: cwd + mcpServers 필수
+    // 2. initialized 알림 (ACP 프로토콜 필수)
+    this.write({ jsonrpc: '2.0', method: 'initialized', params: {} });
+
+    // 3. session/new — Lesson A02: cwd + mcpServers 필수
     const sessionRes = await this.request('session/new', {
       cwd: this.cwd,
       mcpServers: [],
@@ -103,15 +106,18 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
 
   private write(payload: unknown): void {
     const line = JSON.stringify(payload) + '\n';
+    console.log('[bridge →]', line.trim());
     this.process?.stdin?.write(line);
   }
 
   private handleLine(line: string): void {
     if (!line.trim()) return;
+    console.log('[bridge ←]', line.trim());
     let msg: JsonRpcResponse;
     try {
       msg = JSON.parse(line) as JsonRpcResponse;
     } catch {
+      console.warn('[bridge] JSON 파싱 실패:', line);
       return;
     }
 
