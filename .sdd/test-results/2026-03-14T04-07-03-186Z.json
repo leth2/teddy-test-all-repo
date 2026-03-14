@@ -1,0 +1,22 @@
+{
+  "queue_id": "test-queue-sse.json",
+  "run_at": "2026-03-14T04:07:03.185Z",
+  "passed": 1,
+  "failed": 1,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T3.1",
+      "status": "pass",
+      "duration_ms": 181
+    },
+    {
+      "id": "T3.2",
+      "status": "fail",
+      "duration_ms": 60148,
+      "reason": "exit_code 1, expected 0; output missing: agent-ready, T3.2 통과",
+      "output": "SSE 핸드셰이크 테스트 시작 — http://localhost:3002\n타임아웃: 60000ms\nSSE /events 연결 중... (bridge.start()는 서버 자동 실행)\n✅ SSE /events 연결 성공\nfile:///home/leth2/.openclaw/workspace/test-all/test/sse-handshake.js:22\n    reject(new Error(`타임아웃: ${TIMEOUT_MS}ms 초과 — agent-ready 미수신`));\n           ^\n\nError: 타임아웃: 60000ms 초",
+      "retries": 3
+    }
+  ]
+}
