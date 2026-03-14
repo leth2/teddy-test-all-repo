@@ -1,0 +1,22 @@
+{
+  "queue_id": "test-queue-sse.json",
+  "run_at": "2026-03-14T04:02:17.631Z",
+  "passed": 1,
+  "failed": 1,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T3.1",
+      "status": "pass",
+      "duration_ms": 183
+    },
+    {
+      "id": "T3.2",
+      "status": "fail",
+      "duration_ms": 344,
+      "reason": "exit_code 1, expected 0; output missing: agent_ready, T3.2 통과",
+      "output": "SSE 핸드셰이크 테스트 시작 — http://localhost:3002\n타임아웃: 60000ms\nPOST /start → 404\n❌ /start 실패: /start 실패: HTTP 404\n",
+      "retries": 3
+    }
+  ]
+}
