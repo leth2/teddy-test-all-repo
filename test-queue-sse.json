@@ -39,7 +39,7 @@
       },
       "expect": {
         "exit_code": 0,
-        "contains": ["agent_ready", "T3.2 통과"]
+        "contains": ["agent-ready", "T3.2 통과"]
       },
       "timeout_ms": 90000,
       "retry": { "max": 2, "delay_ms": 3000 },
