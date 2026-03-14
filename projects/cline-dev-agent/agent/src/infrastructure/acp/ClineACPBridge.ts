@@ -66,6 +66,7 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
       },
       async sessionUpdate(params: acp.SessionNotification): Promise<void> {
         const update = params.update;
+        console.log('[bridge] sessionUpdate:', update.sessionUpdate, JSON.stringify(update).slice(0, 200));
         switch (update.sessionUpdate) {
           case 'agent_message_chunk':
             if (update.content.type === 'text') {
@@ -86,6 +87,7 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
             });
             break;
           default:
+            console.log('[bridge] unhandled sessionUpdate:', JSON.stringify(update));
             break;
         }
       },
@@ -123,12 +125,16 @@ export class ClineACPBridge extends EventEmitter implements IACPBridge {
 
   sendPrompt(sessionId: string, content: string): void {
     if (!this.connection || !this.sessionId) return;
+    const sid = sessionId || this.sessionId;
+    console.log('[bridge] sendPrompt →', sid, content.slice(0, 50));
     this.connection.prompt({
-      sessionId: sessionId || this.sessionId,
+      sessionId: sid,
       prompt: [{ type: 'text', text: content }],
-    }).then(() => {
+    }).then((result) => {
+      console.log('[bridge] prompt done:', JSON.stringify(result));
       this.emit('message', { content: '', isStreaming: false }); // 완료 시그널
     }).catch((err: unknown) => {
+      console.error('[bridge] prompt error:', err);
       this.emit('error', err);
     });
   }
