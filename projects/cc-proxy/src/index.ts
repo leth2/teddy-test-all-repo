@@ -20,12 +20,12 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // GET /v1/models — 더미 응답 (cline 호환)
 app.get("/v1/models", (_req: Request, res: Response) => {
+  // OAuth로 접근 가능한 모델만 노출 (haiku는 OAuth 범위 밖)
   res.json({
     object: "list",
     data: [
       { id: "claude-sonnet-4-5", object: "model", created: 0, owned_by: "anthropic" },
       { id: "claude-opus-4-5", object: "model", created: 0, owned_by: "anthropic" },
-      { id: "claude-haiku-3-5", object: "model", created: 0, owned_by: "anthropic" },
     ],
   });
 });
