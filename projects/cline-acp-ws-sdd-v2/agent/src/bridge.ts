@@ -70,7 +70,7 @@ export class AcpBridge extends EventEmitter {
    */
   async start(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.process = spawn('npx', ['claude-agent-acp'], {
+      this.process = spawn('npx', ['-y', '@zed-industries/claude-agent-acp'], {
         cwd: this.workDir,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: { ...process.env },
