@@ -1,0 +1,48 @@
+{
+  "version": "1.2",
+  "created_at": "2026-03-14T03:13:00Z",
+  "spec_id": "cline-acp-ws-sdd-v2",
+  "source": {
+    "repo_url": "https://github.com/leth2/teddy-test-all-repo",
+    "branch": "main",
+    "path": "/home/leth2/.openclaw/workspace/test-all",
+    "pre_run": "git pull"
+  },
+  "tasks": [
+    {
+      "id": "T2.1",
+      "type": "conformance",
+      "description": "ACP 핸드셰이크 - session/new + session/prompt 순서 확인",
+      "target": {
+        "kind": "cli",
+        "command": "node",
+        "args": ["test/acp-handshake.js"]
+      },
+      "env": {
+        "ACP_AGENT_URL": "http://localhost:3001"
+      },
+      "expect": {
+        "exit_code": 0,
+        "contains": ["session/new", "session/prompt"]
+      },
+      "timeout_ms": 15000,
+      "retry": { "max": 2, "delay_ms": 2000 },
+      "on_failure": "escalate"
+    },
+    {
+      "id": "T2.2",
+      "type": "conformance",
+      "description": "ACP 에이전트 HTTP 서버 alive 확인",
+      "target": {
+        "kind": "http",
+        "url": "http://localhost:3001/health",
+        "method": "GET"
+      },
+      "expect": {
+        "status": 200
+      },
+      "timeout_ms": 5000,
+      "on_failure": "escalate"
+    }
+  ]
+}
