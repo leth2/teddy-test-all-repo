@@ -1,0 +1,22 @@
+{
+  "queue_id": "test-queue-acp.json",
+  "run_at": "2026-03-14T03:22:27.533Z",
+  "passed": 1,
+  "failed": 1,
+  "skipped": 0,
+  "tasks": [
+    {
+      "id": "T2.1",
+      "status": "fail",
+      "duration_ms": 8688,
+      "reason": "output missing: session/new, session/prompt",
+      "output": "ACP WebSocket 핸드셰이크 테스트 시작 — ws://localhost:3001\n✅ WebSocket 연결 성공\n수신: {\"type\":\"agent_ready\"}\n✅ agent_ready 수신 — ACP 핸드셰이크 완료\n\n✅ ACP 핸드셰이크 통과\n",
+      "retries": 3
+    },
+    {
+      "id": "T2.2",
+      "status": "pass",
+      "duration_ms": 203
+    }
+  ]
+}
