@@ -1,16 +1,28 @@
 /**
- * WebSocket 서버
+ * WebSocket 서버 + HTTP health endpoint
  * Bridge 이벤트 → WebSocket 메시지 변환
  * 단일 세션 제한 (두 번째 연결 거부)
  */
 
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { AcpBridge } from './bridge';
 
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 const WORK_DIR = process.env.WORK_DIR ?? process.cwd();
 
-const wss = new WebSocketServer({ port: PORT });
+// HTTP 서버 — /health 엔드포인트 제공
+const httpServer = createServer((req: IncomingMessage, res: ServerResponse) => {
+  if (req.url === '/health' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+  } else {
+    res.writeHead(404);
+    res.end('Not Found');
+  }
+});
+
+const wss = new WebSocketServer({ server: httpServer });
 
 let activeClient: WebSocket | null = null;
 let activeBridge: AcpBridge | null = null;
@@ -113,4 +125,8 @@ wss.on('connection', async (ws) => {
   });
 });
 
-console.log(`[Server] WebSocket 서버 시작: ws://localhost:${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`[Server] HTTP+WebSocket 서버 시작: http://localhost:${PORT}`);
+  console.log(`[Server] Health check: http://localhost:${PORT}/health`);
+  console.log(`[Server] WebSocket: ws://localhost:${PORT}`);
+});
