@@ -193,7 +193,10 @@ export class ACPBridge extends EventEmitter {
       jsonrpc: '2.0',
       id: 1,
       method: 'session/new',
-      params: {},
+      params: {
+        cwd: process.cwd(),
+        mcpServers: [],
+      },
     };
     this.writeToStdin(message);
   }
