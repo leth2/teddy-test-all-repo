@@ -4,7 +4,6 @@ services:
     ports:
       - "${PORT:-3002}:3002"
     volumes:
-      - ${CLINE_AUTH_DIR:-~/.cline}:/root/.cline:ro
       - ${WORKTREE_PATH:-.}:/workspace
     environment:
       - PORT=3002
@@ -12,6 +11,7 @@ services:
       - SPEC_ID=${SPEC_ID:-dev}
       - WORKTREE=${WORKTREE_PATH:-.}
       - BRANCH=${BRANCH:-main}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 
   ui:
     image: node:20-alpine

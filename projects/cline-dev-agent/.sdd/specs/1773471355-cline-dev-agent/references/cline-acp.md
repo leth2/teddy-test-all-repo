@@ -46,3 +46,19 @@ cline --acp (ACP 에이전트)
 - `cline auth` 실행 → ~/.cline/ 에 인증 정보 저장
 - Docker: ~/.cline:/root/.cline:ro 볼륨 마운트
 - 또는 ANTHROPIC_API_KEY 환경변수 (cline이 지원하는 경우 확인 필요)
+
+## 인증 방법 (확정)
+
+`cline auth` 불필요. `ANTHROPIC_API_KEY` 환경변수만 있으면 `cline --acp` 동작.
+
+```yaml
+# docker-compose.yml
+environment:
+  - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+
+# .env (gitignore)
+ANTHROPIC_API_KEY=sk-ant-oat01-xxxx  # TEDDY_CLAUDE_CODE_TOKEN 값
+```
+
+- `~/.cline` 볼륨 마운트 불필요
+- Quinn이 Pi 2에서 `cline --acp` + ANTHROPIC_API_KEY 환경변수로 동작 확인 (v2.7.0)
