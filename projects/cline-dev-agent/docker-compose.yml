@@ -4,7 +4,7 @@ services:
     ports:
       - "${PORT:-3002}:3002"
     volumes:
-      - ${CLINE_DIR:-/root/.cline}:/root/.cline
+      - /home/leth2/.cline:/root/.cline
       - ${WORKTREE_PATH:-.}:/workspace
     environment:
       - PORT=3002
@@ -13,6 +13,7 @@ services:
       - WORKTREE=${WORKTREE_PATH:-.}
       - BRANCH=${BRANCH:-main}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
 
   ui:
     image: node:20-alpine

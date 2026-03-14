@@ -56,3 +56,28 @@ app.get('/events', (req, res) => {
 ```
 
 ---
+
+## A04 — Claude Code OAuth 토큰 (sk-ant-oat01-) Anthropic API 사용법
+**날짜:** 2026-03-14
+**증상:** `ANTHROPIC_API_KEY=sk-ant-oat01-...` → `"invalid x-api-key"` 에러
+**원인:** `oat01` 토큰은 REST API의 `x-api-key` 헤더가 아닌 OAuth Bearer 방식 필요
+**수정:** cc-proxy를 통해 헤더 변환
+```
+클라이언트: x-api-key: any
+cc-proxy: Authorization: Bearer sk-ant-oat01-...
+          anthropic-beta: claude-code-20250219,oauth-2025-04-20,...
+          user-agent: claude-cli/2.1.62
+          x-app: cli
+```
+**검증:** T4.1~T4.3 통과 (2026-03-14)
+
+## A05 — Docker 컨테이너에서 호스트 cc-proxy 접근
+**날짜:** 2026-03-14
+**증상:** 컨테이너에서 `ANTHROPIC_BASE_URL` 미설정 → cline이 api.anthropic.com 직접 호출
+**수정:** `docker-compose.yml`에 환경변수 추가:
+```yaml
+environment:
+  - ANTHROPIC_BASE_URL=${ANTHROPIC_BASE_URL:-}
+```
+`.env`: `ANTHROPIC_BASE_URL=http://172.17.0.1:8787` (Docker bridge IP)
+**확인:** `docker exec <container> env | grep ANTHROPIC_BASE_URL`
