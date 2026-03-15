@@ -1,0 +1,10 @@
+{
+  "feature": "memo-crud",
+  "created": "2026-03-15",
+  "phase": "implemented",
+  "approvals": {
+    "requirements": { "generated": true },
+    "design": { "generated": true },
+    "tasks": { "generated": true }
+  }
+}
