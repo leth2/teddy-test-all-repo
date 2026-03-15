@@ -1,0 +1,11 @@
+{
+  "feature": "memo-crud",
+  "title": "메모 CRUD",
+  "created": "2026-03-15",
+  "phase": "tasks-generated",
+  "approvals": {
+    "requirements": { "generated": true },
+    "design": { "generated": true },
+    "tasks": { "generated": true }
+  }
+}
