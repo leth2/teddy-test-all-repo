@@ -1,0 +1,106 @@
+# acceptance-tests.yaml
+# 출처: requirements.md AC
+# 자동 추출 — spec-requirements 단계
+
+tests:
+  - id: "AC-1.1-1"
+    requirement: "메모 생성"
+    acceptance_criteria: "제목(1자 이상)과 본문을 입력하면 저장에 성공하고 생성된 메모를 반환한다."
+    scenario: "유효한 제목과 본문으로 메모 생성 호출"
+    expected: "메모 객체 반환 (id, title, body, createdAt 포함)"
+
+  - id: "AC-1.1-2"
+    requirement: "메모 생성"
+    acceptance_criteria: "제목이 빈 문자열이면 저장이 거부되고 오류를 반환한다."
+    scenario: "빈 제목으로 메모 생성 호출"
+    expected: "오류 반환 (ValidationError 또는 유사)"
+
+  - id: "AC-1.1-3"
+    requirement: "메모 생성"
+    acceptance_criteria: "저장된 메모는 고유 ID와 createdAt 타임스탬프를 포함한다."
+    scenario: "메모 생성 후 반환값 확인"
+    expected: "id(고유 문자열)와 createdAt(ISO 날짜 문자열) 포함"
+
+  - id: "AC-1.2-1"
+    requirement: "메모 목록 조회"
+    acceptance_criteria: "메모가 0개일 때 빈 배열을 반환한다."
+    scenario: "빈 저장소에서 목록 조회"
+    expected: "[]"
+
+  - id: "AC-1.2-2"
+    requirement: "메모 목록 조회"
+    acceptance_criteria: "메모가 1개 이상일 때 전체 목록을 반환한다."
+    scenario: "메모 2개 생성 후 목록 조회"
+    expected: "길이 2의 배열 반환"
+
+  - id: "AC-1.2-3"
+    requirement: "메모 목록 조회"
+    acceptance_criteria: "반환된 각 항목은 id, title, createdAt을 포함한다."
+    scenario: "목록 조회 후 각 항목 필드 확인"
+    expected: "각 항목에 id, title, createdAt 필드 존재"
+
+  - id: "AC-1.3-1"
+    requirement: "메모 상세 조회"
+    acceptance_criteria: "존재하는 ID를 지정하면 해당 메모를 반환한다."
+    scenario: "생성된 메모의 ID로 상세 조회"
+    expected: "id, title, body, createdAt, updatedAt 포함 객체 반환"
+
+  - id: "AC-1.3-2"
+    requirement: "메모 상세 조회"
+    acceptance_criteria: "존재하지 않는 ID를 지정하면 오류를 반환한다."
+    scenario: "임의의 존재하지 않는 ID로 조회"
+    expected: "NotFoundError 또는 유사 오류 반환"
+
+  - id: "AC-1.4-1"
+    requirement: "메모 수정"
+    acceptance_criteria: "존재하는 ID에 유효한 제목을 입력하면 수정에 성공하고 갱신된 메모를 반환한다."
+    scenario: "생성된 메모의 ID로 새 제목으로 수정 호출"
+    expected: "갱신된 메모 객체 반환"
+
+  - id: "AC-1.4-2"
+    requirement: "메모 수정"
+    acceptance_criteria: "수정된 메모는 updatedAt이 갱신된다."
+    scenario: "수정 전후 updatedAt 비교"
+    expected: "updatedAt이 createdAt보다 크거나 같은 값"
+
+  - id: "AC-1.4-3"
+    requirement: "메모 수정"
+    acceptance_criteria: "존재하지 않는 ID를 지정하면 오류를 반환한다."
+    scenario: "존재하지 않는 ID로 수정 호출"
+    expected: "NotFoundError 또는 유사 오류 반환"
+
+  - id: "AC-1.4-4"
+    requirement: "메모 수정"
+    acceptance_criteria: "제목을 빈 문자열로 수정하려 하면 거부되고 오류를 반환한다."
+    scenario: "빈 문자열 제목으로 수정 호출"
+    expected: "ValidationError 또는 유사 오류 반환"
+
+  - id: "AC-1.5-1"
+    requirement: "메모 삭제"
+    acceptance_criteria: "존재하는 ID를 지정하면 삭제에 성공한다."
+    scenario: "생성된 메모의 ID로 삭제 호출"
+    expected: "오류 없이 완료"
+
+  - id: "AC-1.5-2"
+    requirement: "메모 삭제"
+    acceptance_criteria: "삭제 후 해당 ID로 조회하면 오류를 반환한다."
+    scenario: "삭제 후 동일 ID로 상세 조회"
+    expected: "NotFoundError 반환"
+
+  - id: "AC-1.5-3"
+    requirement: "메모 삭제"
+    acceptance_criteria: "존재하지 않는 ID를 지정하면 오류를 반환한다."
+    scenario: "존재하지 않는 ID로 삭제 호출"
+    expected: "NotFoundError 또는 유사 오류 반환"
+
+  - id: "AC-2.1-1"
+    requirement: "데이터 영속성"
+    acceptance_criteria: "영속성 파일이 없으면 빈 상태로 초기화된다."
+    scenario: "파일 없는 상태에서 Repository 초기화"
+    expected: "빈 배열로 시작, 오류 없음"
+
+  - id: "AC-3.1-1"
+    requirement: "타입 안전성"
+    acceptance_criteria: "TypeScript strict 모드 하에서 오류 없이 빌드된다."
+    scenario: "tsc --strict 실행"
+    expected: "빌드 오류 0개"
