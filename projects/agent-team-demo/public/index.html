@@ -85,6 +85,19 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .event-type.task_claimed { background: #3a3020; color: #e0af68; }
 .event-type.task_completed { background: #1a472a; color: #73daca; }
 .event-type.agent_action { background: #2a1a3a; color: #bb9af7; }
+.event-type.llm_call { background: #3a2a1a; color: #ff9e64; }
+
+/* LLM 호출 패널 */
+.llm-panel { display: none; background: #1a1b26; border: 1px solid #ff9e64; border-radius: 8px; margin: 8px 12px; padding: 12px; font-size: 11px; animation: llmFadeIn 0.3s ease; }
+.llm-panel.show { display: block; }
+.llm-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; font-weight: 600; }
+.llm-label.prompt { color: #7aa2f7; }
+.llm-label.inbox { color: #bb9af7; }
+.llm-label.response { color: #ff9e64; }
+.llm-content { background: #292e42; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px; white-space: pre-wrap; line-height: 1.4; color: #a9b1d6; max-height: 80px; overflow-y: auto; font-size: 10px; }
+.llm-content.xml { color: #9ece6a; font-family: 'SF Mono', monospace; }
+.llm-arrow { text-align: center; color: #565f89; font-size: 14px; margin: 4px 0; }
+@keyframes llmFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .event-text { color: #a9b1d6; flex: 1; }
 
 /* 파일 내용 모달 */
@@ -133,6 +146,20 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 
   <!-- 중앙: 에이전트 뷰 -->
   <div class="agents-view">
+    <div class="llm-panel" id="llmPanel">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:16px">🧠</span>
+        <span style="font-weight:600;color:#ff9e64" id="llmAgent">agent</span>
+        <span style="color:#565f89;font-size:10px">LLM API 호출</span>
+      </div>
+      <div class="llm-label prompt">① 프롬프트 (사용자/시스템)</div>
+      <div class="llm-content" id="llmPrompt"></div>
+      <div class="llm-label inbox">② Inbox 메시지 → 시스템 프롬프트 주입</div>
+      <div class="llm-content xml" id="llmInbox"></div>
+      <div class="llm-arrow">⬇ LLM API 요청 → 응답 ⬇</div>
+      <div class="llm-label response">③ LLM 응답 (도구 호출 결정)</div>
+      <div class="llm-content" id="llmResponse"></div>
+    </div>
     <div class="agents-grid" id="agentsGrid"></div>
   </div>
 
@@ -203,9 +230,14 @@ function handleEvent(type, data, timestamp) {
     case 'task_claimed':
     case 'task_completed':
       break;
+    case 'llm_call':
+      showLlmPanel(data);
+      setAgentStatus(data.agent, 'active');
+      break;
     case 'agent_action':
       if (data.action === 'idle') setAgentStatus(data.agent, 'idle');
       else setAgentStatus(data.agent, 'active');
+      hideLlmPanel();
       break;
     case 'step_progress': {
       const pct = ((data.currentStep + 1) / data.totalSteps * 100).toFixed(1);
@@ -334,6 +366,7 @@ function addEventLog(type, data, timestamp) {
     case 'task_claimed': text = `${data.owner}이(가) 태스크 #${data.id} claim`; break;
     case 'task_completed': text = `태스크 #${data.id} 완료!`; break;
     case 'agent_action': text = `${data.agent}: ${data.action} ${data.to ? '→ ' + data.to : ''} ${(data.text || '').slice(0, 50)}`; break;
+    case 'llm_call': text = `🧠 ${data.agent} LLM 호출 (inbox: ${data.unread_count}개 미읽)`; break;
     case 'read': text = `${data.agentName}이(가) ${data.count}개 메시지 읽음`; break;
     case 'init': text = '팀 초기화 완료'; break;
     case 'complete': text = data.text; break;
@@ -368,6 +401,28 @@ function highlightAgent(name) {
   if (card) {
     card.style.boxShadow = `0 0 12px ${AGENTS[name]?.color || '#7aa2f7'}40`;
     setTimeout(() => { card.style.boxShadow = 'none'; }, 1000);
+  }
+}
+
+function showLlmPanel(data) {
+  const panel = document.getElementById('llmPanel');
+  const agent = AGENTS[data.agent];
+  document.getElementById('llmAgent').textContent = `${agent?.emoji || '?'} ${data.agent}`;
+  document.getElementById('llmAgent').style.color = agent?.color || '#ff9e64';
+  document.getElementById('llmPrompt').textContent = data.prompt;
+  document.getElementById('llmInbox').textContent = data.inbox_context;
+  document.getElementById('llmResponse').textContent = data.llm_response;
+  panel.classList.add('show');
+  
+  // 해당 에이전트 카드 강조
+  const card = document.getElementById(`card-${data.agent}`);
+  if (card) card.style.borderColor = '#ff9e64';
+}
+function hideLlmPanel() {
+  // LLM 패널은 다음 llm_call까지 유지 (바로 숨기지 않음)
+  for (const key of Object.keys(AGENTS)) {
+    const card = document.getElementById(`card-${key}`);
+    if (card) card.style.borderColor = '#3b4261';
   }
 }
 

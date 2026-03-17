@@ -165,6 +165,7 @@ function describeStep(step) {
     case 'claim_task': return `${emoji} ${step.agent}이(가) 태스크 #${step.taskId} claim`;
     case 'complete_task': return `${emoji} ${step.agent}이(가) 태스크 #${step.taskId} 완료`;
     case 'idle': return `${emoji} ${step.agent} → 유휴 상태`;
+    case 'llm_call': return `🧠 ${step.agent} LLM 호출 — inbox 확인 → API 요청 → 응답 수신`;
     default: return `${emoji} ${step.agent}: ${step.action}`;
   }
 }
@@ -195,6 +196,22 @@ async function executeStep(step) {
         await mailbox.sendMessage(to, { from: step.agent, text: step.text, color: agent.color, type: 'idle_notification' });
       }
       broadcast('agent_action', { agent: step.agent, action: 'idle' });
+      break;
+    }
+    case 'llm_call': {
+      // 가상 LLM 호출 시뮬레이션
+      // 1. inbox에서 미읽 메시지 수집
+      const unread = await mailbox.readUnreadMessages(step.agent);
+      // 2. 읽음 처리
+      await mailbox.markMessagesAsRead(step.agent);
+      
+      broadcast('llm_call', {
+        agent: step.agent,
+        prompt: step.prompt,
+        inbox_context: step.inbox_context,
+        llm_response: step.llm_response,
+        unread_count: unread.length
+      });
       break;
     }
   }
