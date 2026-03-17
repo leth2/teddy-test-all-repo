@@ -25,6 +25,9 @@ app.use(express.json());
 const mailbox = new MailboxSystem(BASE_DIR);
 let scenarioRunning = false;
 let scenarioTimeout = null;
+let stepMode = false;
+let currentStepIndex = -1;
+let stepResolve = null;
 
 // WebSocket — 실시간 이벤트 푸시
 const clients = new Set();
@@ -61,12 +64,8 @@ app.get('/api/filesystem', async (req, res) => {
   res.json(tree);
 });
 
-app.post('/api/scenario/start', async (req, res) => {
-  if (scenarioRunning) return res.status(400).json({ error: 'Scenario already running' });
-  
-  // 초기화
+async function initTeam() {
   await fs.rm(BASE_DIR, { recursive: true, force: true });
-  
   const teamConfig = {
     teamName: TEAM_NAME,
     members: Object.values(AGENT_PROFILES).map(a => ({
@@ -76,22 +75,130 @@ app.post('/api/scenario/start', async (req, res) => {
       agentType: a.name === 'lead' ? 'lead' : 'teammate'
     }))
   };
-  
   await mailbox.init(teamConfig);
   broadcast('init', { teamConfig, baseDir: BASE_DIR });
-  
+  return teamConfig;
+}
+
+// 자동 재생 모드
+app.post('/api/scenario/start', async (req, res) => {
+  if (scenarioRunning) return res.status(400).json({ error: 'Scenario already running' });
+  stepMode = false;
+  currentStepIndex = -1;
+  await initTeam();
   scenarioRunning = true;
   runScenario();
-  res.json({ status: 'started' });
+  res.json({ status: 'started', mode: 'auto' });
+});
+
+// 스텝 모드 시작
+app.post('/api/scenario/step-start', async (req, res) => {
+  if (scenarioRunning) return res.status(400).json({ error: 'Scenario already running' });
+  stepMode = true;
+  currentStepIndex = -1;
+  await initTeam();
+  scenarioRunning = true;
+  
+  // 스텝 정보 전송
+  const steps = SCENARIO_STEPS.map((s, i) => ({
+    index: i,
+    agent: s.agent,
+    action: s.action,
+    to: s.to,
+    text: s.text || s.task?.subject || s.taskId || '',
+    description: describeStep(s)
+  }));
+  broadcast('step_mode', { steps, currentStep: -1, totalSteps: steps.length });
+  res.json({ status: 'started', mode: 'step', totalSteps: steps.length });
+});
+
+// 다음 스텝 실행
+app.post('/api/scenario/next-step', async (req, res) => {
+  if (!scenarioRunning || !stepMode) return res.status(400).json({ error: 'Not in step mode' });
+  
+  currentStepIndex++;
+  if (currentStepIndex >= SCENARIO_STEPS.length) {
+    scenarioRunning = false;
+    broadcast('scenario_complete', {});
+    return res.json({ status: 'complete' });
+  }
+  
+  const step = SCENARIO_STEPS[currentStepIndex];
+  await executeStep(step);
+  
+  const snapshot = await mailbox.getFileSystemSnapshot();
+  broadcast('fs_update', snapshot);
+  broadcast('step_progress', { 
+    currentStep: currentStepIndex, 
+    totalSteps: SCENARIO_STEPS.length,
+    step: describeStep(step),
+    agent: step.agent,
+    action: step.action
+  });
+  
+  res.json({ 
+    status: 'ok', 
+    currentStep: currentStepIndex, 
+    totalSteps: SCENARIO_STEPS.length,
+    hasNext: currentStepIndex < SCENARIO_STEPS.length - 1
+  });
 });
 
 app.post('/api/scenario/reset', async (req, res) => {
   scenarioRunning = false;
+  stepMode = false;
+  currentStepIndex = -1;
   if (scenarioTimeout) clearTimeout(scenarioTimeout);
   await fs.rm(BASE_DIR, { recursive: true, force: true });
   broadcast('reset', {});
   res.json({ status: 'reset' });
 });
+
+// 스텝 설명 생성
+function describeStep(step) {
+  const agent = AGENT_PROFILES[step.agent];
+  const emoji = agent?.emoji || '?';
+  switch (step.action) {
+    case 'broadcast': return `${emoji} ${step.agent}이(가) 전체에게: "${(step.text||'').slice(0, 60)}..."`;
+    case 'message': return `${emoji} ${step.agent} → ${step.to}: "${(step.text||'').slice(0, 60)}..."`;
+    case 'create_task': return `${emoji} ${step.agent}이(가) 태스크 생성: #${step.task.id} ${step.task.subject}`;
+    case 'claim_task': return `${emoji} ${step.agent}이(가) 태스크 #${step.taskId} claim`;
+    case 'complete_task': return `${emoji} ${step.agent}이(가) 태스크 #${step.taskId} 완료`;
+    case 'idle': return `${emoji} ${step.agent} → 유휴 상태`;
+    default: return `${emoji} ${step.agent}: ${step.action}`;
+  }
+}
+
+// 단일 스텝 실행
+async function executeStep(step) {
+  const agent = AGENT_PROFILES[step.agent];
+  switch (step.action) {
+    case 'broadcast': {
+      const others = Object.keys(AGENT_PROFILES).filter(n => n !== step.agent);
+      for (const to of others) {
+        await mailbox.sendMessage(to, { from: step.agent, text: step.text, color: agent.color, type: 'chat' });
+      }
+      broadcast('agent_action', { agent: step.agent, action: 'broadcast', text: step.text });
+      break;
+    }
+    case 'message': {
+      await mailbox.sendMessage(step.to, { from: step.agent, text: step.text, color: agent.color, type: 'chat' });
+      broadcast('agent_action', { agent: step.agent, action: 'message', to: step.to, text: step.text });
+      break;
+    }
+    case 'create_task': { await mailbox.createTask(step.task); break; }
+    case 'claim_task': { await mailbox.claimTask(step.taskId, step.agent); break; }
+    case 'complete_task': { await mailbox.completeTask(step.taskId, step.result); break; }
+    case 'idle': {
+      const others = Object.keys(AGENT_PROFILES).filter(n => n !== step.agent);
+      for (const to of others) {
+        await mailbox.sendMessage(to, { from: step.agent, text: step.text, color: agent.color, type: 'idle_notification' });
+      }
+      broadcast('agent_action', { agent: step.agent, action: 'idle' });
+      break;
+    }
+  }
+}
 
 async function runScenario() {
   for (const step of SCENARIO_STEPS) {
@@ -102,60 +209,8 @@ async function runScenario() {
     });
     if (!scenarioRunning) break;
 
-    const agent = AGENT_PROFILES[step.agent];
+    await executeStep(step);
     
-    switch (step.action) {
-      case 'broadcast': {
-        const others = Object.keys(AGENT_PROFILES).filter(n => n !== step.agent);
-        for (const to of others) {
-          await mailbox.sendMessage(to, {
-            from: step.agent,
-            text: step.text,
-            color: agent.color,
-            type: 'chat'
-          });
-        }
-        broadcast('agent_action', { agent: step.agent, action: 'broadcast', text: step.text });
-        break;
-      }
-      case 'message': {
-        await mailbox.sendMessage(step.to, {
-          from: step.agent,
-          text: step.text,
-          color: agent.color,
-          type: 'chat'
-        });
-        broadcast('agent_action', { agent: step.agent, action: 'message', to: step.to, text: step.text });
-        break;
-      }
-      case 'create_task': {
-        await mailbox.createTask(step.task);
-        break;
-      }
-      case 'claim_task': {
-        await mailbox.claimTask(step.taskId, step.agent);
-        break;
-      }
-      case 'complete_task': {
-        await mailbox.completeTask(step.taskId, step.result);
-        break;
-      }
-      case 'idle': {
-        const others = Object.keys(AGENT_PROFILES).filter(n => n !== step.agent);
-        for (const to of others) {
-          await mailbox.sendMessage(to, {
-            from: step.agent,
-            text: step.text,
-            color: agent.color,
-            type: 'idle_notification'
-          });
-        }
-        broadcast('agent_action', { agent: step.agent, action: 'idle' });
-        break;
-      }
-    }
-    
-    // 매 액션마다 파일 시스템 스냅샷 전송
     const snapshot = await mailbox.getFileSystemSnapshot();
     broadcast('fs_update', snapshot);
   }

@@ -18,6 +18,14 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .btn.primary:hover { background: #89b4fa; }
 .btn.danger { border-color: #f7768e; color: #f7768e; }
 
+/* 스텝 정보 바 */
+.step-bar { background: #1f2335; padding: 8px 24px; border-bottom: 1px solid #3b4261; }
+.step-progress-bar { height: 4px; background: #292e42; border-radius: 2px; margin-bottom: 6px; }
+.step-progress-fill { height: 100%; background: linear-gradient(90deg, #7aa2f7, #bb9af7); border-radius: 2px; transition: width 0.3s ease; width: 0%; }
+.step-info { display: flex; align-items: center; gap: 12px; }
+.step-counter { font-size: 12px; color: #bb9af7; font-weight: 600; white-space: nowrap; }
+.step-desc { font-size: 12px; color: #a9b1d6; flex: 1; }
+
 .main { display: grid; grid-template-columns: 280px 1fr 320px; height: calc(100vh - 60px); }
 
 /* 왼쪽: 파일 시스템 */
@@ -96,8 +104,21 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
     <div class="subtitle">~/.claude/teams/todo-app-design/ — 파일 기반 메시지 통신 시각화</div>
   </div>
   <div class="controls">
-    <button class="btn primary" id="startBtn" onclick="startScenario()">▶ 시나리오 시작</button>
+    <button class="btn primary" id="autoBtn" onclick="startScenario()">▶ 자동 재생</button>
+    <button class="btn" id="stepStartBtn" onclick="startStepMode()" style="border-color:#bb9af7;color:#bb9af7">⏭ 스텝 모드</button>
+    <button class="btn" id="nextBtn" onclick="nextStep()" style="display:none;border-color:#9ece6a;color:#9ece6a">⏩ 다음 스텝</button>
     <button class="btn danger" id="resetBtn" onclick="resetScenario()">↺ 리셋</button>
+  </div>
+</div>
+
+<!-- 스텝 정보 바 -->
+<div class="step-bar" id="stepBar" style="display:none">
+  <div class="step-progress-bar">
+    <div class="step-progress-fill" id="stepProgressFill"></div>
+  </div>
+  <div class="step-info">
+    <span class="step-counter" id="stepCounter">0 / 0</span>
+    <span class="step-desc" id="stepDesc"></span>
   </div>
 </div>
 
@@ -186,6 +207,17 @@ function handleEvent(type, data, timestamp) {
       if (data.action === 'idle') setAgentStatus(data.agent, 'idle');
       else setAgentStatus(data.agent, 'active');
       break;
+    case 'step_progress': {
+      const pct = ((data.currentStep + 1) / data.totalSteps * 100).toFixed(1);
+      document.getElementById('stepProgressFill').style.width = `${pct}%`;
+      document.getElementById('stepCounter').textContent = `${data.currentStep + 1} / ${data.totalSteps}`;
+      document.getElementById('stepDesc').textContent = data.step;
+      break;
+    }
+    case 'step_mode': {
+      document.getElementById('stepCounter').textContent = `0 / ${data.totalSteps}`;
+      break;
+    }
     case 'reset':
       document.getElementById('fileTree').innerHTML = '<div style="padding:16px;color:#565f89;font-size:12px;">시나리오를 시작하면 파일이 생성됩니다</div>';
       document.getElementById('tasksList').innerHTML = '';
@@ -349,15 +381,68 @@ function closeModal() { document.getElementById('fileModal').classList.remove('s
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeAttr(s) { return JSON.stringify(s).replace(/'/g, "\\'"); }
 
+let isStepMode = false;
+
 async function startScenario() {
-  document.getElementById('startBtn').disabled = true;
+  document.getElementById('autoBtn').disabled = true;
+  document.getElementById('stepStartBtn').disabled = true;
+  document.getElementById('stepBar').style.display = 'none';
+  isStepMode = false;
   await fetch('/api/scenario/start', { method: 'POST' });
-  setTimeout(() => { document.getElementById('startBtn').disabled = false; }, 30000);
+  setTimeout(() => { 
+    document.getElementById('autoBtn').disabled = false;
+    document.getElementById('stepStartBtn').disabled = false;
+  }, 30000);
+}
+
+async function startStepMode() {
+  isStepMode = true;
+  document.getElementById('autoBtn').style.display = 'none';
+  document.getElementById('stepStartBtn').style.display = 'none';
+  document.getElementById('nextBtn').style.display = 'inline-block';
+  document.getElementById('stepBar').style.display = 'block';
+  document.getElementById('stepDesc').textContent = '⏭ "다음 스텝" 버튼을 눌러 한 단계씩 진행하세요';
+  document.getElementById('stepCounter').textContent = '준비';
+  await fetch('/api/scenario/step-start', { method: 'POST' });
+}
+
+async function nextStep() {
+  document.getElementById('nextBtn').disabled = true;
+  const res = await fetch('/api/scenario/next-step', { method: 'POST' });
+  const data = await res.json();
+  
+  if (data.status === 'complete') {
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('stepDesc').textContent = '✅ 시나리오 완료!';
+    document.getElementById('stepProgressFill').style.width = '100%';
+    return;
+  }
+  
+  document.getElementById('nextBtn').disabled = false;
+  // 키보드로도 다음 스텝 가능하게 포커스
+  document.getElementById('nextBtn').focus();
 }
 
 async function resetScenario() {
+  isStepMode = false;
+  document.getElementById('autoBtn').style.display = 'inline-block';
+  document.getElementById('stepStartBtn').style.display = 'inline-block';
+  document.getElementById('autoBtn').disabled = false;
+  document.getElementById('stepStartBtn').disabled = false;
+  document.getElementById('nextBtn').style.display = 'none';
+  document.getElementById('stepBar').style.display = 'none';
   await fetch('/api/scenario/reset', { method: 'POST' });
 }
+
+// 키보드 단축키: Space 또는 → 로 다음 스텝
+document.addEventListener('keydown', (e) => {
+  if (!isStepMode) return;
+  if (e.code === 'Space' || e.code === 'ArrowRight') {
+    e.preventDefault();
+    const btn = document.getElementById('nextBtn');
+    if (btn && !btn.disabled && btn.style.display !== 'none') nextStep();
+  }
+});
 
 // 초기화
 initAgentCards();
