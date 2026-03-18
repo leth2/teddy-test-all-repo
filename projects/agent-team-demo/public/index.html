@@ -61,6 +61,11 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .agent-status.active { background: #1a472a; color: #9ece6a; }
 .agent-status.idle { background: #3b3020; color: #e0af68; }
 
+.agent-activity { padding: 4px 8px; min-height: 22px; font-size: 10px; border-bottom: 1px solid #292e42; color: #ff9e64; display: flex; align-items: center; gap: 6px; background: #1f1e2e; }
+.agent-activity .tool-spinner { display: inline-block; width: 8px; height: 8px; border: 1.5px solid #ff9e64; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0; }
+.agent-activity .tool-name { font-weight: 600; color: #e0af68; }
+.agent-activity .tool-desc { color: #a9b1d6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes spin { to { transform: rotate(360deg); } }
 .agent-inbox { overflow-y: auto; padding: 6px; max-height: 180px; min-height: 32px; }
 .inbox-msg { padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 11px; line-height: 1.4; border-left: 3px solid; background: #292e42; }
 .inbox-msg.unread { background: #1f2335; border-left-width: 3px; }
@@ -91,6 +96,7 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .event-type.task_completed { background: #1a472a; color: #73daca; }
 .event-type.agent_action { background: #2a1a3a; color: #bb9af7; }
 .event-type.llm_call { background: #3a2a1a; color: #ff9e64; }
+.event-type.tool_call { background: #1a1a3a; color: #7dcfff; }
 
 /* LLM 호출 패널 */
 .llm-panel { display: none; background: #1a1b26; border: 1px solid #ff9e64; border-radius: 8px; margin: 8px 12px; padding: 12px; font-size: 11px; animation: llmFadeIn 0.3s ease; }
@@ -280,11 +286,16 @@ function handleEvent(type, data, timestamp) {
     case 'task_claimed':
     case 'task_completed':
       break;
+    case 'tool_call':
+      showToolCall(data.agent, data.tool, data.desc);
+      break;
     case 'llm_call':
+      clearToolCall(data.agent);
       showLlmPanel(data);
       setAgentStatus(data.agent, 'active');
       break;
     case 'agent_action':
+      clearToolCall(data.agent);
       if (data.action === 'idle') setAgentStatus(data.agent, 'idle');
       else setAgentStatus(data.agent, 'active');
       hideLlmPanel();
@@ -302,6 +313,7 @@ function handleEvent(type, data, timestamp) {
     }
     case 'reset':
       fileHistory = {};
+      for (const key of Object.keys(AGENTS)) clearToolCall(key);
       document.getElementById('inlineViewer').style.display = 'none';
       document.getElementById('fileTree').style.maxHeight = '45%';
       document.getElementById('fileTree').innerHTML = '<div style="padding:16px;color:#565f89;font-size:12px;">시나리오를 시작하면 파일이 생성됩니다</div>';
@@ -327,6 +339,11 @@ function initAgentCards() {
           <span class="agent-name">${agent.emoji} ${agent.name}</span>
           <span class="agent-role">${agent.role}</span>
           <span class="agent-status" id="status-${key}">대기</span>
+        </div>
+        <div class="agent-activity" id="activity-${key}" style="display:none">
+          <span class="tool-spinner"></span>
+          <span class="tool-name" id="activity-tool-${key}"></span>
+          <span class="tool-desc" id="activity-desc-${key}"></span>
         </div>
         <div class="agent-inbox" id="inbox-${key}"></div>
       </div>`;
@@ -438,6 +455,7 @@ function addEventLog(type, data, timestamp) {
     case 'task_claimed': text = `${data.owner}이(가) 태스크 #${data.id} claim`; break;
     case 'task_completed': text = `태스크 #${data.id} 완료!`; break;
     case 'agent_action': text = `${data.agent}: ${data.action} ${data.to ? '→ ' + data.to : ''} ${(data.text || '').slice(0, 50)}`; break;
+    case 'tool_call': text = `🔧 ${data.agent} → ${toolEmojis[data.tool]||''} ${data.tool}(${data.desc||''})`; break;
     case 'llm_call': text = `🧠 ${data.agent} LLM 호출 (inbox: ${data.unread_count}개 미읽)`; break;
     case 'read': text = `${data.agentName}이(가) ${data.count}개 메시지 읽음`; break;
     case 'init': text = '팀 초기화 완료'; break;
@@ -474,6 +492,27 @@ function highlightAgent(name) {
     card.style.boxShadow = `0 0 12px ${AGENTS[name]?.color || '#7aa2f7'}40`;
     setTimeout(() => { card.style.boxShadow = 'none'; }, 1000);
   }
+}
+
+const toolEmojis = { Read:'📖', Write:'✏️', Edit:'📝', Bash:'⚡', WebSearch:'🔍', TaskCreate:'📋', TaskUpdate:'🔄', SendMessage:'💬', TaskList:'📊' };
+
+function showToolCall(agent, tool, desc) {
+  const el = document.getElementById(`activity-${agent}`);
+  if (!el) return;
+  document.getElementById(`activity-tool-${agent}`).textContent = `${toolEmojis[tool] || '🔧'} ${tool}`;
+  document.getElementById(`activity-desc-${agent}`).textContent = desc || '';
+  el.style.display = 'flex';
+  setAgentStatus(agent, 'active');
+  // 카드 테두리 깜빡임
+  const card = document.getElementById(`card-${agent}`);
+  if (card) card.style.borderColor = '#ff9e64';
+}
+
+function clearToolCall(agent) {
+  const el = document.getElementById(`activity-${agent}`);
+  if (el) el.style.display = 'none';
+  const card = document.getElementById(`card-${agent}`);
+  if (card) card.style.borderColor = '#3b4261';
 }
 
 function showLlmPanel(data) {
