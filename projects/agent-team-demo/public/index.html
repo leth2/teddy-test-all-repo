@@ -34,10 +34,10 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .resize-handle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: currentColor; border-radius: 2px; opacity: 0.5; }
 
 /* 왼쪽: 파일 시스템 */
-.panel { border-right: 1px solid #3b4261; overflow-y: auto; }
-.panel-title { padding: 12px 16px; font-size: 12px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #3b4261; background: #1f2335; position: sticky; top: 0; z-index: 1; }
+.panel { border-right: 1px solid #3b4261; display: flex; flex-direction: column; overflow: hidden; }
+.panel-title { padding: 12px 16px; font-size: 12px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #3b4261; background: #1f2335; flex-shrink: 0; }
 
-.file-tree { padding: 8px; }
+.file-tree { padding: 8px; overflow-y: auto; flex: 0 0 auto; max-height: 45%; }
 .tree-item { padding: 4px 8px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .tree-item:hover { background: #292e42; }
 .tree-item.dir { color: #7aa2f7; }
@@ -113,16 +113,30 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .file-modal-body { padding: 16px; overflow-y: auto; max-height: calc(80vh - 50px); }
 .file-modal-body pre { font-size: 11px; white-space: pre-wrap; color: #9ece6a; }
 
-/* 파일 diff 뷰 */
-.diff-view { display: grid; grid-template-columns: 1fr 1fr; gap: 0; font-size: 11px; }
-.diff-pane { padding: 12px; overflow-y: auto; max-height: calc(80vh - 80px); }
-.diff-pane.before { background: #1a1b26; border-right: 1px solid #3b4261; }
-.diff-pane.after { background: #1f2335; }
-.diff-pane-title { font-size: 10px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-.diff-line { padding: 1px 0; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
-.diff-line.added { color: #9ece6a; background: #1a472a20; }
-.diff-line.removed { color: #f7768e; background: #3b132020; text-decoration: line-through; opacity: 0.6; }
-.diff-line.unchanged { color: #a9b1d6; }
+/* 인라인 파일 뷰어 */
+.inline-viewer { flex: 1; border-top: 1px solid #3b4261; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.inline-viewer-header { padding: 6px 12px; background: #1f2335; border-bottom: 1px solid #3b4261; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.inline-viewer-title { font-size: 11px; color: #7aa2f7; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inline-viewer-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+.iv-tab { padding: 2px 8px; font-size: 10px; border: 1px solid #3b4261; background: transparent; color: #565f89; border-radius: 3px; cursor: pointer; font-family: inherit; }
+.iv-tab.active { background: #292e42; color: #c0caf5; border-color: #7aa2f7; }
+.iv-tab.diff-active { background: #1a2a4a; color: #9ece6a; border-color: #9ece6a; }
+.inline-viewer-body { flex: 1; overflow-y: auto; min-height: 0; }
+.iv-content pre { padding: 10px 12px; font-size: 10px; white-space: pre-wrap; color: #9ece6a; line-height: 1.5; }
+.iv-empty { padding: 16px; color: #565f89; font-size: 11px; }
+
+/* 인라인 diff */
+.iv-diff { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+.iv-diff-pane { overflow-y: auto; padding: 8px 10px; font-size: 10px; line-height: 1.5; }
+.iv-diff-pane.before { border-right: 1px solid #3b4261; background: #18191f; }
+.iv-diff-pane.after { background: #1f2335; }
+.iv-diff-pane-label { font-size: 9px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid #292e42; }
+.diff-line { padding: 1px 0; white-space: pre-wrap; word-break: break-all; }
+.diff-line.added { color: #9ece6a; }
+.diff-line.removed { color: #f7768e; text-decoration: line-through; opacity: 0.7; }
+.diff-line.unchanged { color: #565f89; }
+.diff-line.changed-bg-add { background: #1a472a30; }
+.diff-line.changed-bg-rem { background: #3b132030; }
 </style>
 </head>
 <body>
@@ -154,9 +168,32 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 <div class="main" id="mainGrid">
   <!-- 왼쪽: 파일 시스템 -->
   <div class="panel" id="leftPanel">
-    <div class="panel-title">📂 파일 시스템 (실시간) <span style="color:#3b4261;font-size:10px;float:right;margin-top:1px">클릭: 내용 / Ctrl+클릭: diff</span></div>
+    <div class="panel-title">📂 파일 시스템 (실시간)</div>
     <div class="file-tree" id="fileTree">
       <div style="padding: 16px; color: #565f89; font-size: 12px;">시나리오를 시작하면 파일이 생성됩니다</div>
+    </div>
+    <!-- 인라인 파일 뷰어 -->
+    <div class="inline-viewer" id="inlineViewer" style="display:none">
+      <div class="inline-viewer-header">
+        <span class="inline-viewer-title" id="ivTitle">파일명</span>
+        <div class="inline-viewer-tabs">
+          <button class="iv-tab active" id="ivTabContent" onclick="switchIvTab('content')">내용</button>
+          <button class="iv-tab" id="ivTabDiff" onclick="switchIvTab('diff')" style="display:none">🔀 변경</button>
+        </div>
+      </div>
+      <div class="inline-viewer-body">
+        <div class="iv-content" id="ivContent"><pre id="ivPre"></pre></div>
+        <div class="iv-diff" id="ivDiff" style="display:none">
+          <div class="iv-diff-pane before">
+            <div class="iv-diff-pane-label">이전</div>
+            <div id="ivDiffBefore"></div>
+          </div>
+          <div class="iv-diff-pane after">
+            <div class="iv-diff-pane-label">현재</div>
+            <div id="ivDiffAfter"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="resize-handle" id="leftHandle"></div>
@@ -194,34 +231,7 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
   </div>
 </div>
 
-<!-- 파일 내용 모달 -->
-<div class="file-modal" id="fileModal" onclick="if(event.target===this)closeModal()">
-  <div class="file-modal-content" style="width:720px">
-    <div class="file-modal-header">
-      <div style="display:flex;align-items:center;gap:12px">
-        <span id="modalTitle"></span>
-        <div style="display:flex;gap:4px" id="modalTabs">
-          <button class="btn" id="tabContent" onclick="showModalTab('content')" style="padding:4px 10px;font-size:11px">📄 내용</button>
-          <button class="btn" id="tabDiff" onclick="showModalTab('diff')" style="padding:4px 10px;font-size:11px;display:none">🔀 변경사항</button>
-        </div>
-      </div>
-      <button class="btn" onclick="closeModal()">✕</button>
-    </div>
-    <div id="modalContentView" class="file-modal-body"><pre id="modalContent"></pre></div>
-    <div id="modalDiffView" style="display:none">
-      <div class="diff-view">
-        <div class="diff-pane before">
-          <div class="diff-pane-title">이전 (before)</div>
-          <div id="diffBefore"></div>
-        </div>
-        <div class="diff-pane after">
-          <div class="diff-pane-title">현재 (after)</div>
-          <div id="diffAfter"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <script>
 const AGENTS = {
@@ -261,6 +271,7 @@ function handleEvent(type, data, timestamp) {
       updateFileTree(data);
       updateTasksList(data.tasks);
       updateInboxes(data.inboxes);
+      autoOpenChangedFile(data);
       break;
     case 'message':
       highlightAgent(data.recipient);
@@ -291,6 +302,8 @@ function handleEvent(type, data, timestamp) {
     }
     case 'reset':
       fileHistory = {};
+      document.getElementById('inlineViewer').style.display = 'none';
+      document.getElementById('fileTree').style.maxHeight = '45%';
       document.getElementById('fileTree').innerHTML = '<div style="padding:16px;color:#565f89;font-size:12px;">시나리오를 시작하면 파일이 생성됩니다</div>';
       document.getElementById('tasksList').innerHTML = '';
       document.getElementById('eventLog').innerHTML = '';
@@ -485,81 +498,98 @@ function hideLlmPanel() {
   }
 }
 
+let currentIvTab = 'content';
+
 function showFile(name, content) {
   const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
   const prev = fileHistory[name + '__prev'];
 
-  document.getElementById('modalTitle').textContent = name;
-  document.getElementById('modalContent').textContent = text;
+  const viewer = document.getElementById('inlineViewer');
+  document.getElementById('ivTitle').textContent = name;
+  document.getElementById('ivPre').textContent = text;
   currentModalContent = text;
   currentModalPrev = prev || '';
 
-  // diff 탭 표시 여부
-  const diffTab = document.getElementById('tabDiff');
+  const diffTab = document.getElementById('ivTabDiff');
   if (prev && prev !== text) {
     diffTab.style.display = 'inline-block';
-    buildDiff(prev, text);
+    buildInlineDiff(prev, text);
+    // 변경된 파일이면 자동으로 diff 탭 열기
+    switchIvTab('diff');
   } else {
     diffTab.style.display = 'none';
+    switchIvTab('content');
   }
 
-  showModalTab('content');
-  document.getElementById('fileModal').classList.add('show');
+  viewer.style.display = 'flex';
+  // 파일 트리 max-height 줄여서 뷰어 공간 확보
+  document.getElementById('fileTree').style.maxHeight = '40%';
 }
 
-function showModalTab(tab) {
-  const contentView = document.getElementById('modalContentView');
-  const diffView = document.getElementById('modalDiffView');
-  const tabContent = document.getElementById('tabContent');
-  const tabDiff = document.getElementById('tabDiff');
+function switchIvTab(tab) {
+  currentIvTab = tab;
+  const contentEl = document.getElementById('ivContent');
+  const diffEl = document.getElementById('ivDiff');
+  const tabContent = document.getElementById('ivTabContent');
+  const tabDiff = document.getElementById('ivTabDiff');
 
   if (tab === 'content') {
-    contentView.style.display = 'block';
-    diffView.style.display = 'none';
-    tabContent.style.background = '#7aa2f7';
-    tabContent.style.color = '#1a1b26';
-    tabDiff.style.background = '';
-    tabDiff.style.color = '';
+    contentEl.style.display = 'block';
+    diffEl.style.display = 'none';
+    tabContent.className = 'iv-tab active';
+    tabDiff.className = 'iv-tab';
   } else {
-    contentView.style.display = 'none';
-    diffView.style.display = 'block';
-    tabDiff.style.background = '#9ece6a';
-    tabDiff.style.color = '#1a1b26';
-    tabContent.style.background = '';
-    tabContent.style.color = '';
+    contentEl.style.display = 'none';
+    diffEl.style.display = 'grid';
+    tabContent.className = 'iv-tab';
+    tabDiff.className = 'iv-tab diff-active';
   }
 }
 
-function buildDiff(before, after) {
-  const beforeLines = before.split('\n');
-  const afterLines = after.split('\n');
-  const beforeEl = document.getElementById('diffBefore');
-  const afterEl = document.getElementById('diffAfter');
+// 변경된 파일이 있으면 자동으로 인라인 뷰어에 표시
+function autoOpenChangedFile(snapshot) {
+  // 가장 최근에 변경된 파일 찾기
+  let changedKey = null;
+  const checks = [];
+  if (snapshot.config) checks.push(['config.json', JSON.stringify(snapshot.config, null, 2)]);
+  for (const [name, msgs] of Object.entries(snapshot.inboxes || {})) {
+    checks.push([`inboxes/${name}.json`, JSON.stringify(msgs, null, 2)]);
+  }
+  for (const task of (snapshot.tasks || [])) {
+    checks.push([`tasks/${task.id}.json`, JSON.stringify(task, null, 2)]);
+  }
+  for (const [key, content] of checks) {
+    const prev = fileHistory[key + '__prev'];
+    if (prev && prev !== content) { changedKey = key; break; }
+  }
+  if (changedKey) {
+    const content = fileHistory[changedKey];
+    if (content) showFile(changedKey, content);
+  }
+}
 
-  // 간단한 라인 기반 diff
-  const maxLen = Math.max(beforeLines.length, afterLines.length);
-  let beforeHtml = '', afterHtml = '';
+function buildInlineDiff(before, after) {
+  const bl = before.split('\n'), al = after.split('\n');
+  const maxLen = Math.max(bl.length, al.length);
+  let bHtml = '', aHtml = '';
 
   for (let i = 0; i < maxLen; i++) {
-    const b = beforeLines[i];
-    const a = afterLines[i];
+    const b = bl[i], a = al[i];
     if (b === undefined) {
-      afterHtml += `<div class="diff-line added">${escapeHtml(a)}</div>`;
+      aHtml += `<div class="diff-line added">${escapeHtml(a)}</div>`;
     } else if (a === undefined) {
-      beforeHtml += `<div class="diff-line removed">${escapeHtml(b)}</div>`;
+      bHtml += `<div class="diff-line removed">${escapeHtml(b)}</div>`;
     } else if (b !== a) {
-      beforeHtml += `<div class="diff-line removed">${escapeHtml(b)}</div>`;
-      afterHtml += `<div class="diff-line added">${escapeHtml(a)}</div>`;
+      bHtml += `<div class="diff-line removed changed-bg-rem">${escapeHtml(b)}</div>`;
+      aHtml += `<div class="diff-line added changed-bg-add">${escapeHtml(a)}</div>`;
     } else {
-      beforeHtml += `<div class="diff-line unchanged">${escapeHtml(b)}</div>`;
-      afterHtml += `<div class="diff-line unchanged">${escapeHtml(a)}</div>`;
+      bHtml += `<div class="diff-line unchanged">${escapeHtml(b)}</div>`;
+      aHtml += `<div class="diff-line unchanged">${escapeHtml(a)}</div>`;
     }
   }
-  beforeEl.innerHTML = beforeHtml;
-  afterEl.innerHTML = afterHtml;
+  document.getElementById('ivDiffBefore').innerHTML = bHtml;
+  document.getElementById('ivDiffAfter').innerHTML = aHtml;
 }
-
-function closeModal() { document.getElementById('fileModal').classList.remove('show'); }
 
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function escapeAttr(s) { return JSON.stringify(s).replace(/'/g, "\\'"); }
