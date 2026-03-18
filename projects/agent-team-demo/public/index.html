@@ -26,7 +26,12 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .step-counter { font-size: 12px; color: #bb9af7; font-weight: 600; white-space: nowrap; }
 .step-desc { font-size: 12px; color: #a9b1d6; flex: 1; }
 
-.main { display: grid; grid-template-columns: 280px 1fr 320px; height: calc(100vh - 60px); }
+.main { display: grid; grid-template-columns: var(--left-w, 280px) 1fr var(--right-w, 320px); height: calc(100vh - 60px); }
+
+/* 리사이즈 핸들 */
+.resize-handle { width: 4px; background: #3b4261; cursor: col-resize; position: relative; z-index: 10; transition: background 0.15s; flex-shrink: 0; }
+.resize-handle:hover, .resize-handle.active { background: #7aa2f7; }
+.resize-handle::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 2px; height: 32px; background: currentColor; border-radius: 2px; opacity: 0.5; }
 
 /* 왼쪽: 파일 시스템 */
 .panel { border-right: 1px solid #3b4261; overflow-y: auto; }
@@ -45,9 +50,9 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 
 /* 중앙: 에이전트 뷰 */
 .agents-view { display: flex; flex-direction: column; }
-.agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 12px; flex: 1; overflow-y: auto; }
+.agents-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px; flex: 1; overflow-y: auto; align-content: start; }
 
-.agent-card { background: #1f2335; border: 1px solid #3b4261; border-radius: 8px; display: flex; flex-direction: column; min-height: 0; }
+.agent-card { background: #1f2335; border: 1px solid #3b4261; border-radius: 8px; display: flex; flex-direction: column; height: fit-content; }
 .agent-header { padding: 10px 12px; border-bottom: 1px solid #3b4261; display: flex; align-items: center; gap: 8px; }
 .agent-dot { width: 8px; height: 8px; border-radius: 50%; }
 .agent-name { font-size: 13px; font-weight: 600; }
@@ -56,7 +61,7 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .agent-status.active { background: #1a472a; color: #9ece6a; }
 .agent-status.idle { background: #3b3020; color: #e0af68; }
 
-.agent-inbox { flex: 1; overflow-y: auto; padding: 8px; max-height: 200px; }
+.agent-inbox { overflow-y: auto; padding: 6px; max-height: 180px; min-height: 32px; }
 .inbox-msg { padding: 6px 8px; margin-bottom: 4px; border-radius: 4px; font-size: 11px; line-height: 1.4; border-left: 3px solid; background: #292e42; }
 .inbox-msg.unread { background: #1f2335; border-left-width: 3px; }
 .inbox-msg .from { font-weight: 600; font-size: 10px; margin-bottom: 2px; }
@@ -107,6 +112,17 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 .file-modal-header { padding: 12px 16px; border-bottom: 1px solid #3b4261; display: flex; justify-content: space-between; align-items: center; }
 .file-modal-body { padding: 16px; overflow-y: auto; max-height: calc(80vh - 50px); }
 .file-modal-body pre { font-size: 11px; white-space: pre-wrap; color: #9ece6a; }
+
+/* 파일 diff 뷰 */
+.diff-view { display: grid; grid-template-columns: 1fr 1fr; gap: 0; font-size: 11px; }
+.diff-pane { padding: 12px; overflow-y: auto; max-height: calc(80vh - 80px); }
+.diff-pane.before { background: #1a1b26; border-right: 1px solid #3b4261; }
+.diff-pane.after { background: #1f2335; }
+.diff-pane-title { font-size: 10px; color: #565f89; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.diff-line { padding: 1px 0; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+.diff-line.added { color: #9ece6a; background: #1a472a20; }
+.diff-line.removed { color: #f7768e; background: #3b132020; text-decoration: line-through; opacity: 0.6; }
+.diff-line.unchanged { color: #a9b1d6; }
 </style>
 </head>
 <body>
@@ -135,14 +151,15 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
   </div>
 </div>
 
-<div class="main">
+<div class="main" id="mainGrid">
   <!-- 왼쪽: 파일 시스템 -->
-  <div class="panel">
-    <div class="panel-title">📂 파일 시스템 (실시간)</div>
+  <div class="panel" id="leftPanel">
+    <div class="panel-title">📂 파일 시스템 (실시간) <span style="color:#3b4261;font-size:10px;float:right;margin-top:1px">클릭: 내용 / Ctrl+클릭: diff</span></div>
     <div class="file-tree" id="fileTree">
       <div style="padding: 16px; color: #565f89; font-size: 12px;">시나리오를 시작하면 파일이 생성됩니다</div>
     </div>
   </div>
+  <div class="resize-handle" id="leftHandle"></div>
 
   <!-- 중앙: 에이전트 뷰 -->
   <div class="agents-view">
@@ -163,8 +180,9 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
     <div class="agents-grid" id="agentsGrid"></div>
   </div>
 
+  <div class="resize-handle" id="rightHandle"></div>
   <!-- 오른쪽: 태스크 + 이벤트 -->
-  <div class="right-panel">
+  <div class="right-panel" id="rightPanel">
     <div class="tasks-section">
       <div class="panel-title">📋 공유 태스크 리스트</div>
       <div id="tasksList"></div>
@@ -178,12 +196,30 @@ body { font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; background: #
 
 <!-- 파일 내용 모달 -->
 <div class="file-modal" id="fileModal" onclick="if(event.target===this)closeModal()">
-  <div class="file-modal-content">
+  <div class="file-modal-content" style="width:720px">
     <div class="file-modal-header">
-      <span id="modalTitle"></span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span id="modalTitle"></span>
+        <div style="display:flex;gap:4px" id="modalTabs">
+          <button class="btn" id="tabContent" onclick="showModalTab('content')" style="padding:4px 10px;font-size:11px">📄 내용</button>
+          <button class="btn" id="tabDiff" onclick="showModalTab('diff')" style="padding:4px 10px;font-size:11px;display:none">🔀 변경사항</button>
+        </div>
+      </div>
       <button class="btn" onclick="closeModal()">✕</button>
     </div>
-    <div class="file-modal-body"><pre id="modalContent"></pre></div>
+    <div id="modalContentView" class="file-modal-body"><pre id="modalContent"></pre></div>
+    <div id="modalDiffView" style="display:none">
+      <div class="diff-view">
+        <div class="diff-pane before">
+          <div class="diff-pane-title">이전 (before)</div>
+          <div id="diffBefore"></div>
+        </div>
+        <div class="diff-pane after">
+          <div class="diff-pane-title">현재 (after)</div>
+          <div id="diffAfter"></div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -197,6 +233,9 @@ const AGENTS = {
 
 let ws;
 let agentStates = {};
+let fileHistory = {};  // 파일별 이전 내용 히스토리
+let currentModalContent = '';
+let currentModalPrev = '';
 
 // WebSocket 연결
 function connect() {
@@ -251,6 +290,7 @@ function handleEvent(type, data, timestamp) {
       break;
     }
     case 'reset':
+      fileHistory = {};
       document.getElementById('fileTree').innerHTML = '<div style="padding:16px;color:#565f89;font-size:12px;">시나리오를 시작하면 파일이 생성됩니다</div>';
       document.getElementById('tasksList').innerHTML = '';
       document.getElementById('eventLog').innerHTML = '';
@@ -303,20 +343,36 @@ function updateInboxes(inboxes) {
 function updateFileTree(snapshot) {
   const el = document.getElementById('fileTree');
   let html = '';
-  
+
+  // 파일 히스토리 업데이트 헬퍼
+  const trackFile = (key, content) => {
+    const prev = fileHistory[key];
+    if (prev !== undefined && prev !== content) {
+      fileHistory[key + '__prev'] = prev;
+    }
+    fileHistory[key] = content;
+    return prev !== undefined && prev !== content;
+  };
+
   // config.json
   if (snapshot.config) {
-    html += `<div class="tree-item file" onclick="showFile('config.json', ${escapeAttr(JSON.stringify(snapshot.config, null, 2))})">
-      <span class="icon">📄</span> config.json</div>`;
+    const content = JSON.stringify(snapshot.config, null, 2);
+    const changed = trackFile('config.json', content);
+    const badge = changed ? ' <span style="color:#ff9e64">●</span>' : '';
+    html += `<div class="tree-item file" onclick="showFile('config.json', ${escapeAttr(content)})">
+      <span class="icon">📄</span> config.json${badge}</div>`;
   }
   
   // inboxes/
   html += `<div class="tree-item dir"><span class="icon">📁</span> inboxes/</div>`;
   for (const [name, msgs] of Object.entries(snapshot.inboxes)) {
+    const content = JSON.stringify(msgs, null, 2);
     const unread = msgs.filter(m => !m.read).length;
-    const badge = unread > 0 ? ` <span style="color:#f7768e">(${unread} new)</span>` : '';
-    html += `<div class="tree-indent"><div class="tree-item file" onclick="showFile('inboxes/${name}.json', ${escapeAttr(JSON.stringify(msgs, null, 2))})">
-      <span class="icon">💌</span> ${name}.json${badge}</div></div>`;
+    const changed = trackFile(`inboxes/${name}.json`, content);
+    const unreadBadge = unread > 0 ? ` <span style="color:#f7768e">(${unread} new)</span>` : '';
+    const changeBadge = changed ? ' <span style="color:#ff9e64">●</span>' : '';
+    html += `<div class="tree-indent"><div class="tree-item file" onclick="showFile('inboxes/${name}.json', ${escapeAttr(content)})">
+      <span class="icon">💌</span> ${name}.json${unreadBadge}${changeBadge}</div></div>`;
   }
   
   // lock files
@@ -330,8 +386,11 @@ function updateFileTree(snapshot) {
     html += `<div class="tree-item dir"><span class="icon">📁</span> tasks/</div>`;
     for (const task of snapshot.tasks) {
       const icon = task.status === 'completed' ? '✅' : task.status === 'in_progress' ? '🔄' : '⬜';
-      html += `<div class="tree-indent"><div class="tree-item file" onclick="showFile('tasks/${task.id}.json', ${escapeAttr(JSON.stringify(task, null, 2))})">
-        <span class="icon">${icon}</span> ${task.id}.json</div></div>`;
+      const content = JSON.stringify(task, null, 2);
+      const changed = trackFile(`tasks/${task.id}.json`, content);
+      const changeBadge = changed ? ' <span style="color:#ff9e64">●</span>' : '';
+      html += `<div class="tree-indent"><div class="tree-item file" onclick="showFile('tasks/${task.id}.json', ${escapeAttr(content)})">
+        <span class="icon">${icon}</span> ${task.id}.json${changeBadge}</div></div>`;
     }
   }
   
@@ -427,10 +486,79 @@ function hideLlmPanel() {
 }
 
 function showFile(name, content) {
+  const text = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+  const prev = fileHistory[name + '__prev'];
+
   document.getElementById('modalTitle').textContent = name;
-  document.getElementById('modalContent').textContent = typeof content === 'string' ? content : JSON.stringify(JSON.parse(content), null, 2);
+  document.getElementById('modalContent').textContent = text;
+  currentModalContent = text;
+  currentModalPrev = prev || '';
+
+  // diff 탭 표시 여부
+  const diffTab = document.getElementById('tabDiff');
+  if (prev && prev !== text) {
+    diffTab.style.display = 'inline-block';
+    buildDiff(prev, text);
+  } else {
+    diffTab.style.display = 'none';
+  }
+
+  showModalTab('content');
   document.getElementById('fileModal').classList.add('show');
 }
+
+function showModalTab(tab) {
+  const contentView = document.getElementById('modalContentView');
+  const diffView = document.getElementById('modalDiffView');
+  const tabContent = document.getElementById('tabContent');
+  const tabDiff = document.getElementById('tabDiff');
+
+  if (tab === 'content') {
+    contentView.style.display = 'block';
+    diffView.style.display = 'none';
+    tabContent.style.background = '#7aa2f7';
+    tabContent.style.color = '#1a1b26';
+    tabDiff.style.background = '';
+    tabDiff.style.color = '';
+  } else {
+    contentView.style.display = 'none';
+    diffView.style.display = 'block';
+    tabDiff.style.background = '#9ece6a';
+    tabDiff.style.color = '#1a1b26';
+    tabContent.style.background = '';
+    tabContent.style.color = '';
+  }
+}
+
+function buildDiff(before, after) {
+  const beforeLines = before.split('\n');
+  const afterLines = after.split('\n');
+  const beforeEl = document.getElementById('diffBefore');
+  const afterEl = document.getElementById('diffAfter');
+
+  // 간단한 라인 기반 diff
+  const maxLen = Math.max(beforeLines.length, afterLines.length);
+  let beforeHtml = '', afterHtml = '';
+
+  for (let i = 0; i < maxLen; i++) {
+    const b = beforeLines[i];
+    const a = afterLines[i];
+    if (b === undefined) {
+      afterHtml += `<div class="diff-line added">${escapeHtml(a)}</div>`;
+    } else if (a === undefined) {
+      beforeHtml += `<div class="diff-line removed">${escapeHtml(b)}</div>`;
+    } else if (b !== a) {
+      beforeHtml += `<div class="diff-line removed">${escapeHtml(b)}</div>`;
+      afterHtml += `<div class="diff-line added">${escapeHtml(a)}</div>`;
+    } else {
+      beforeHtml += `<div class="diff-line unchanged">${escapeHtml(b)}</div>`;
+      afterHtml += `<div class="diff-line unchanged">${escapeHtml(a)}</div>`;
+    }
+  }
+  beforeEl.innerHTML = beforeHtml;
+  afterEl.innerHTML = afterHtml;
+}
+
 function closeModal() { document.getElementById('fileModal').classList.remove('show'); }
 
 function escapeHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -499,9 +627,42 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// 패널 리사이즈
+function initResize() {
+  const main = document.getElementById('mainGrid');
+  function makeDraggable(handleId, side) {
+    const handle = document.getElementById(handleId);
+    if (!handle) return;
+    let dragging = false, startX = 0, startW = 0;
+    handle.addEventListener('mousedown', (e) => {
+      dragging = true; startX = e.clientX; handle.classList.add('active');
+      const prop = side === 'left' ? '--left-w' : '--right-w';
+      const def = side === 'left' ? 280 : 320;
+      startW = parseInt(main.style.getPropertyValue(prop) || def);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const newW = Math.max(150, Math.min(600, startW + (side === 'left' ? dx : -dx)));
+      main.style.setProperty(side === 'left' ? '--left-w' : '--right-w', newW + 'px');
+    });
+    document.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false; handle.classList.remove('active');
+      document.body.style.cursor = ''; document.body.style.userSelect = '';
+    });
+  }
+  makeDraggable('leftHandle', 'left');
+  makeDraggable('rightHandle', 'right');
+}
+
 // 초기화
 initAgentCards();
 connect();
+initResize();
 </script>
 </body>
 </html>
