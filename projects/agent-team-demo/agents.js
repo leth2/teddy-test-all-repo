@@ -1,5 +1,5 @@
 /**
- * 시뮬레이션 에이전트 — 리더 1명 + 팀원 3명
+ * 시뮬레이션 에이전트 - 리더 1명 + 팀원 3명
  * 각 에이전트는 자기 inbox를 주기적으로 확인하고,
  * 메시지/태스크에 반응하는 독립적인 루프로 동작
  */
@@ -40,7 +40,7 @@ const AGENT_PROFILES = {
  * - 각 스텝은 LLM 턴을 시뮬레이션
  * - llm_call: 가상 LLM API 호출 (프롬프트 + inbox 메시지 → 응답)
  * - action: LLM 응답에 따른 도구 호출 (메시지 전송, 태스크 생성 등)
- * 
+ *
  * 실제 Claude Code 동작:
  * 1. 에이전트의 inbox에서 미읽 메시지 수집
  * 2. 메시지를 <teammate-message> XML로 시스템 프롬프트에 주입
@@ -53,11 +53,15 @@ const SCENARIO_STEPS = [
   // ── Turn 1: Lead 시작 ──
   { delay: 1000, agent: 'lead', action: 'llm_call',
     prompt: '사용자가 "할 일 관리 앱을 설계해줘"라고 요청했습니다. 팀을 구성하고 태스크를 분배하세요.',
-    inbox_context: '(inbox 비어있음 — 첫 번째 턴)',
+    inbox_context: '(inbox 비어있음 - 첫 번째 턴)',
     llm_response: '팀 전원에게 브리핑하고 태스크 3개를 생성하겠습니다.\n→ Tool: SendMessage(broadcast), TaskCreate x3' },
+  { delay: 400, agent: 'lead', action: 'tool_call', tool: 'SendMessage', desc: 'Broadcasting to all teammates' },
   { delay: 500, agent: 'lead', action: 'broadcast', text: '팀 안녕! 오늘 할 일: "할 일 관리 앱" 설계. 태스크 나눠줄게.' },
+  { delay: 200, agent: 'lead', action: 'tool_call', tool: 'TaskCreate', desc: 'Creating task #1' },
   { delay: 300, agent: 'lead', action: 'create_task', task: { id: '1', subject: '기존 Todo 앱 사례 조사', description: '인기 있는 할 일 관리 앱 5개 분석' } },
+  { delay: 200, agent: 'lead', action: 'tool_call', tool: 'TaskCreate', desc: 'Creating task #2' },
   { delay: 300, agent: 'lead', action: 'create_task', task: { id: '2', subject: 'API 스키마 설계', description: 'REST API 엔드포인트 + 데이터 모델', blockedBy: ['1'] } },
+  { delay: 200, agent: 'lead', action: 'tool_call', tool: 'TaskCreate', desc: 'Creating task #3' },
   { delay: 300, agent: 'lead', action: 'create_task', task: { id: '3', subject: '코드 구조 리뷰 기준 작성', description: '리뷰 체크리스트 + 품질 기준' } },
 
   // ── Turn 2: Lead 태스크 할당 ──
@@ -65,7 +69,9 @@ const SCENARIO_STEPS = [
     prompt: '태스크 3개를 생성했습니다. 적절한 팀원에게 할당하세요.',
     inbox_context: '(inbox 비어있음)',
     llm_response: 'Researcher에게 #1, Reviewer에게 #3 할당. Developer는 #2가 #1 의존이라 대기.\n→ Tool: SendMessage x2' },
-  { delay: 500, agent: 'lead', action: 'message', to: 'researcher', text: '태스크 #1 맡아줘. 기존 Todo 앱들 조사해서 핵심 기능 정리해줘.' },
+  { delay: 400, agent: 'lead', action: 'tool_call', tool: 'SendMessage', desc: 'Sending task to researcher' },
+  { delay: 300, agent: 'lead', action: 'message', to: 'researcher', text: '태스크 #1 맡아줘. 기존 Todo 앱들 조사해서 핵심 기능 정리해줘.' },
+  { delay: 200, agent: 'lead', action: 'tool_call', tool: 'SendMessage', desc: 'Sending task to reviewer' },
   { delay: 300, agent: 'lead', action: 'message', to: 'reviewer', text: '태스크 #3 맡아줘. 코드 리뷰 기준 잡아놔.' },
 
   // ── Turn 3: Researcher inbox 확인 → claim ──
@@ -73,15 +79,19 @@ const SCENARIO_STEPS = [
     prompt: '(시스템 프롬프트: 당신은 Researcher입니다)',
     inbox_context: '<teammate-message teammate_id="lead" color="#E8B931">\n  팀 안녕! 오늘 할 일: "할 일 관리 앱" 설계.\n</teammate-message>\n<teammate-message teammate_id="lead" color="#E8B931">\n  태스크 #1 맡아줘. 기존 Todo 앱들 조사해서 핵심 기능 정리해줘.\n</teammate-message>',
     llm_response: 'Lead가 태스크 #1을 할당했습니다. Claim하고 작업 시작합니다.\n→ Tool: TaskUpdate(claim #1), SendMessage(lead)' },
-  { delay: 500, agent: 'researcher', action: 'claim_task', taskId: '1' },
+  { delay: 300, agent: 'researcher', action: 'tool_call', tool: 'TaskUpdate', desc: 'Claiming task #1' },
+  { delay: 400, agent: 'researcher', action: 'claim_task', taskId: '1' },
+  { delay: 200, agent: 'researcher', action: 'tool_call', tool: 'WebSearch', desc: 'Searching for "top todo apps 2026"' },
   { delay: 300, agent: 'researcher', action: 'message', to: 'lead', text: '태스크 #1 시작합니다. Todoist, TickTick, Things 3, Microsoft To Do, Google Tasks 분석 중...' },
-
+  
   // ── Turn 4: Reviewer inbox 확인 → claim ──
   { delay: 800, agent: 'reviewer', action: 'llm_call',
     prompt: '(시스템 프롬프트: 당신은 Reviewer입니다)',
     inbox_context: '<teammate-message teammate_id="lead" color="#E8B931">\n  태스크 #3 맡아줘. 코드 리뷰 기준 잡아놔.\n</teammate-message>',
     llm_response: 'Lead가 태스크 #3을 할당했습니다. Claim하고 리뷰 기준 작성합니다.\n→ Tool: TaskUpdate(claim #3), SendMessage(lead)' },
-  { delay: 500, agent: 'reviewer', action: 'claim_task', taskId: '3' },
+  { delay: 300, agent: 'reviewer', action: 'tool_call', tool: 'TaskUpdate', desc: 'Claiming task #3' },
+  { delay: 400, agent: 'reviewer', action: 'claim_task', taskId: '3' },
+  { delay: 200, agent: 'reviewer', action: 'tool_call', tool: 'Read', desc: 'Reading existing code standards' },
   { delay: 300, agent: 'reviewer', action: 'message', to: 'lead', text: '태스크 #3 접수! TypeScript strict mode, 테스트 커버리지 80%+ 기준으로 잡을게요.' },
 
   // ── Turn 5: Developer inbox 확인 → 질문 ──
@@ -108,9 +118,13 @@ const SCENARIO_STEPS = [
   // ── Turn 8: Researcher 완료 보고 ──
   { delay: 1200, agent: 'researcher', action: 'llm_call',
     prompt: '(연구 완료)',
-    inbox_context: '(inbox 비어있음 — 작업에 집중 중이었음)',
+    inbox_context: '(inbox 비어있음 - 작업에 집중 중이었음)',
     llm_response: '조사 완료. 태스크 #1 완료 처리하고 결과를 전체에게 공유합니다.\n→ Tool: TaskUpdate(complete #1), SendMessage(broadcast)' },
-  { delay: 500, agent: 'researcher', action: 'complete_task', taskId: '1', result: '핵심 기능: CRUD, 우선순위, 마감일, 카테고리, 반복 설정' },
+  { delay: 300, agent: 'researcher', action: 'tool_call', tool: 'WebSearch', desc: 'Searching for "Todoist features API"' },
+  { delay: 300, agent: 'researcher', action: 'tool_call', tool: 'WebSearch', desc: 'Searching for "TickTick vs Things 3 comparison"' },
+  { delay: 300, agent: 'researcher', action: 'tool_call', tool: 'TaskUpdate', desc: 'Completing task #1' },
+  { delay: 400, agent: 'researcher', action: 'complete_task', taskId: '1', result: '핵심 기능: CRUD, 우선순위, 마감일, 카테고리, 반복 설정' },
+  { delay: 200, agent: 'researcher', action: 'tool_call', tool: 'SendMessage', desc: 'Broadcasting results to team' },
   { delay: 300, agent: 'researcher', action: 'broadcast', text: '📊 조사 완료!\n• 공통 기능: CRUD, 우선순위(P1~P4), 마감일, 카테고리\n• 차별점: 자연어 입력, AI 분류, 습관 추적\n• 추천 MVP: CRUD + 우선순위 + 마감일' },
 
   // ── Turn 9: Lead → Developer에게 시작 지시 ──
@@ -125,7 +139,9 @@ const SCENARIO_STEPS = [
     prompt: '(다음 턴)',
     inbox_context: '<teammate-message teammate_id="lead" color="#E8B931">\n  Researcher 조사 끝났어! 태스크 #2 시작해.\n</teammate-message>\n<teammate-message teammate_id="researcher" color="#4A9EE0">\n  📊 조사 완료! MVP: CRUD + 우선순위 + 마감일\n</teammate-message>',
     llm_response: '태스크 #2 claim하고 API 설계를 시작합니다.\n→ Tool: TaskUpdate(claim #2), SendMessage(lead)' },
-  { delay: 500, agent: 'developer', action: 'claim_task', taskId: '2' },
+  { delay: 300, agent: 'developer', action: 'tool_call', tool: 'TaskUpdate', desc: 'Claiming task #2' },
+  { delay: 400, agent: 'developer', action: 'claim_task', taskId: '2' },
+  { delay: 200, agent: 'developer', action: 'tool_call', tool: 'Read', desc: 'Reading researcher findings' },
   { delay: 300, agent: 'developer', action: 'message', to: 'lead', text: '태스크 #2 시작! API 스키마 설계 중...' },
 
   // ── Turn 11: Reviewer 완료 ──
@@ -133,7 +149,10 @@ const SCENARIO_STEPS = [
     prompt: '(리뷰 기준 작성 완료)',
     inbox_context: '<teammate-message teammate_id="researcher" color="#4A9EE0">\n  📊 조사 완료!\n</teammate-message>',
     llm_response: '리뷰 기준 완성. 태스크 #3 완료 처리합니다.\n→ Tool: TaskUpdate(complete #3), SendMessage(lead)' },
-  { delay: 500, agent: 'reviewer', action: 'complete_task', taskId: '3', result: '리뷰 기준서 완성 (TSLint, 80%+ coverage, RESTful 규칙)' },
+  { delay: 300, agent: 'reviewer', action: 'tool_call', tool: 'Write', desc: 'Writing review-standards.md' },
+  { delay: 300, agent: 'reviewer', action: 'tool_call', tool: 'TaskUpdate', desc: 'Completing task #3' },
+  { delay: 400, agent: 'reviewer', action: 'complete_task', taskId: '3', result: '리뷰 기준서 완성 (TSLint, 80%+ coverage, RESTful 규칙)' },
+  { delay: 200, agent: 'reviewer', action: 'tool_call', tool: 'SendMessage', desc: 'Reporting to lead' },
   { delay: 300, agent: 'reviewer', action: 'message', to: 'lead', text: '리뷰 기준 완성했어요!\n✅ TypeScript strict mode\n✅ 테스트 커버리지 80%+\n✅ RESTful 규칙 준수\n✅ 에러 핸들링 미들웨어 필수' },
 
   // ── Turn 12: Developer ↔ Reviewer 직접 통신 ──
@@ -155,7 +174,11 @@ const SCENARIO_STEPS = [
     prompt: '(API 설계 완료)',
     inbox_context: '<teammate-message teammate_id="reviewer" color="#E07C4A">\n  좋아요! is_deleted + deleted_at 패턴 추천.\n</teammate-message>',
     llm_response: 'API 스키마 설계 완료. 태스크 #2 완료 처리하고 결과를 공유합니다.\n→ Tool: TaskUpdate(complete #2), SendMessage(broadcast)' },
-  { delay: 500, agent: 'developer', action: 'complete_task', taskId: '2', result: 'API 스키마: POST/GET/PUT/DELETE /todos, 우선순위/마감일/카테고리 지원' },
+  { delay: 300, agent: 'developer', action: 'tool_call', tool: 'Write', desc: 'Writing api-schema.ts' },
+  { delay: 300, agent: 'developer', action: 'tool_call', tool: 'Write', desc: 'Writing todo.model.ts' },
+  { delay: 200, agent: 'developer', action: 'tool_call', tool: 'TaskUpdate', desc: 'Completing task #2' },
+  { delay: 400, agent: 'developer', action: 'complete_task', taskId: '2', result: 'API 스키마: POST/GET/PUT/DELETE /todos, 우선순위/마감일/카테고리 지원' },
+  { delay: 200, agent: 'developer', action: 'tool_call', tool: 'SendMessage', desc: 'Broadcasting results' },
   { delay: 300, agent: 'developer', action: 'broadcast', text: '🛠️ API 스키마 설계 완료!\nEndpoints: POST/GET/PUT/DELETE /api/todos\nModel: { id, title, priority, dueDate, category, isDone, isDeleted, deletedAt }' },
 
   // ── Turn 15: Lead 종합 ──
