@@ -12,6 +12,7 @@ POC 및 테스트 프로젝트 모노레포.
 | cline-acp-* | Cline ACP 브릿지 POC 시리즈 | TypeScript |
 | cc-proxy | Claude Code OAuth 프록시 | Node.js |
 | [cc-auto-yes](./projects/cc-auto-yes) | Claude Code TUI 프롬프트 자동 Yes 선택 래퍼 | Python |
+| [iterm2-auto-yes](./projects/iterm2-auto-yes) | 실행 중인 iTerm2 세션 감시 → Yes 자동 선택 | Python, AppleScript |
 
 ## 용도
 
