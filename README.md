@@ -11,6 +11,7 @@ POC 및 테스트 프로젝트 모노레포.
 | [url-shortener](./projects/url-shortener) | SDD 도구 테스트용 URL 단축 서비스 | - |
 | cline-acp-* | Cline ACP 브릿지 POC 시리즈 | TypeScript |
 | cc-proxy | Claude Code OAuth 프록시 | Node.js |
+| [cc-auto-yes](./projects/cc-auto-yes) | Claude Code TUI 프롬프트 자동 Yes 선택 래퍼 | Python |
 
 ## 용도
 
