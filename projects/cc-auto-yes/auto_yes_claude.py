@@ -26,10 +26,11 @@ import time
 
 
 # Yes 가 이미 선택된 상태 (그냥 Enter)
-YES_SELECTED_PATTERN = re.compile(r'❯\s*Yes', re.IGNORECASE)
+# 지원 형식: ❯ Yes / > Yes / >1. Yes / ❯ 1. Yes
+YES_SELECTED_PATTERN = re.compile(r'[❯>]\s*\d*\.?\s*Yes', re.IGNORECASE)
 
 # No 가 선택된 상태 (위쪽 화살표로 Yes로 이동 필요)
-NO_SELECTED_PATTERN = re.compile(r'❯\s*No', re.IGNORECASE)
+NO_SELECTED_PATTERN = re.compile(r'[❯>]\s*\d*\.?\s*No', re.IGNORECASE)
 
 # 텍스트 기반 [Y/n] 형식
 YES_DEFAULT_PATTERN = re.compile(r'\[Y/n\]', re.IGNORECASE)

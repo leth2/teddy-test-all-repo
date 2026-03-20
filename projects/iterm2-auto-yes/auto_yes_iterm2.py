@@ -33,8 +33,13 @@ import datetime
 # ── 패턴 정의 ────────────────────────────────────────────────────────────────
 
 # TUI 화살표 선택 패턴 (Claude Code inkl. 한글 프롬프트)
-YES_SELECTED   = re.compile(r'[❯>]\s*Yes',  re.IGNORECASE)
-NO_SELECTED    = re.compile(r'[❯>]\s*No',   re.IGNORECASE)
+# 지원 형식:
+#   ❯ Yes        (화살표 선택)
+#   > Yes        (> 선택)
+#   >1. Yes      (번호 목록)
+#   ❯ 1. Yes
+YES_SELECTED   = re.compile(r'[❯>]\s*\d*\.?\s*Yes',  re.IGNORECASE)
+NO_SELECTED    = re.compile(r'[❯>]\s*\d*\.?\s*No',   re.IGNORECASE)
 
 # 텍스트 기반 프롬프트
 YES_DEFAULT    = re.compile(r'\[Y/n\]',     re.IGNORECASE)
